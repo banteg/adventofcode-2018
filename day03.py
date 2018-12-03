@@ -8,10 +8,9 @@ import numpy as np
 #3 @ 5,5: 2x2''': 4
 })
 def part_1(data):
-    claims = [re.search(r'(\d+),(\d+): (\d+)x(\d+)', x) for x in data.splitlines()]
-    rects = [tuple(map(int, x.groups())) for x in claims]
+    rects = data.ints_lines
     fabric = np.zeros((1000, 1000))
-    for x, y, w, h in rects:
+    for n, x, y, w, h in rects:
         fabric[x:x+w, y:y+h] += 1
     return sum(sum(fabric > 1))
 
@@ -22,8 +21,7 @@ def part_1(data):
 #3 @ 5,5: 2x2''': 3
 })
 def part_1(data):
-    claims = [re.search(r'#(\d+) @ (\d+),(\d+): (\d+)x(\d+)', x) for x in data.splitlines()]
-    rects = [tuple(map(int, x.groups())) for x in claims]
+    rects = data.ints_lines
     fabric = np.zeros((1000, 1000))
     for n, x, y, w, h in rects:
         fabric[x:x+w, y:y+h] += 1
