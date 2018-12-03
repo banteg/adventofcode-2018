@@ -8,10 +8,10 @@ import aoc
     '+1\n+1\n-2': 0,
     '-1\n-2\n-3': -6,
 })
-def part_1(data):
+def part_1(data: aoc.Data):
     value = 0
-    for adj in data.splitlines():
-        value += int(adj)
+    for adj in data.int_lines:
+        value += adj
     return value
 
 
@@ -25,8 +25,8 @@ def part_1(data):
 def part_2(data):
     value = 0
     seen = {0}
-    for adj in cycle(data.splitlines()):
-        value += int(adj)
+    for adj in cycle(data.int_lines):
+        value += adj
         if value in seen:
             break
         seen.add(value)
