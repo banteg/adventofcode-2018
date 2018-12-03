@@ -1,32 +1,25 @@
 from collections import Counter
 from itertools import combinations
-import adventofcode
+import aoc
 
-data = adventofcode.load_input(2).splitlines()
-# data = 'abcdef,bababc,abbcde,abcccd,aabcdd,abcdee,ababab'.split(',')
 
-counts = Counter()
+@aoc.test({'abcdef\nbababc\nabbcde\nabcccd\naabcdd\nabcdee\nababab': 12})
+def part_1(data):
+    counts = Counter()
 
-for line in data:
-    line_counts = Counter()
-    for a, v in Counter(line).items():
-        line_counts[v] = 1
-    counts += line_counts
+    for line in data.splitlines():
+        line_counts = Counter()
+        for a, v in Counter(line).items():
+            line_counts[v] = 1
+        counts += line_counts
 
-print(counts[2] * counts[3])
+    return counts[2] * counts[3]
 
-# -- part 2 --
 
-# data = '''abcde
-# fghij
-# klmno
-# pqrst
-# fguij
-# axcye
-# wvxyz'''.splitlines()
-
-for p in combinations(data, 2):
-    matching = [x for x, y in zip(*p) if x == y]
-    distance = len(p[0]) - len(matching)
-    if distance == 1:
-        print(''.join(matching))
+@aoc.test({'abcde\nfghij\nklmno\npqrst\nfguij\naxcye\nwvxyz': 'fgij'})
+def part_2(data):
+    for p in combinations(data.splitlines(), 2):
+        matching = [x for x, y in zip(*p) if x == y]
+        distance = len(p[0]) - len(matching)
+        if distance == 1:
+            return ''.join(matching)
