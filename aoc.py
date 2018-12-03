@@ -9,6 +9,20 @@ ok = click.style('✔︎', fg='green')
 fail = click.style('✘', fg='red')
 
 
+class Data(str):
+
+    def __init__(self, data: str):
+        self = data
+
+    @property
+    def int_lines(self):
+        return [int(x) for x in self.splitlines()]
+
+    @property
+    def ints_lines(self):
+        return [list(map(int, re.findall(r'-?\d+', line))) for line in self.splitlines()]
+
+
 def test(cases):
     def decorator(f):
         day = int(re.search(r'\d+', __import__(f.__module__).__file__).group(0))
@@ -17,7 +31,7 @@ def test(cases):
         tests_ok = True
         for case, expected in cases.items():
             case_pretty = case.replace('\n', ', ')
-            result = f(case)
+            result = f(Data(case))
             if result == expected:
                 click.secho(f'{ok} {case_pretty} == {result}')
             else:
@@ -25,7 +39,7 @@ def test(cases):
                 tests_ok = False
         if tests_ok:
             data = load_input(day)
-            result = f(data)
+            result = f(Data(data))
             click.secho(f'{result}\n')
         else:
             click.secho('tests failed\n', fg='red')
