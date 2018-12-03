@@ -19,7 +19,7 @@ def part_1(data: aoc.Data):
 #2 @ 3,1: 4x4
 #3 @ 5,5: 2x2''': 3
 })
-def part_1(data: aoc.Data):
+def part_2(data: aoc.Data):
     rects = data.ints_lines
     fabric = np.zeros((1000, 1000))
     for n, x, y, w, h in rects:
