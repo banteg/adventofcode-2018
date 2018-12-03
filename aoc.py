@@ -17,7 +17,10 @@ class Data(str):
 
     @property
     def ints_lines(self):
-        return [list(map(int, re.findall(r'-?\d+', line))) for line in self.splitlines()]
+        return [
+            [int(x) for x in re.findall(r'-?\d+', line)]
+            for line in self.splitlines()
+        ]
 
 
 def test(cases):
