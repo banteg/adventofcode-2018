@@ -22,7 +22,7 @@ def part_1(data: aoc.Data):
     '-6\n+3\n+8\n+5\n-6': 5,
     '+7\n+7\n-2\n-7\n-4': 14,
 })
-def part_2(data):
+def part_2(data: aoc.Data):
     value = 0
     seen = {0}
     for adj in cycle(data.int_lines):
