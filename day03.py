@@ -11,7 +11,7 @@ def part_1(data: aoc.Data):
     fabric = np.zeros((1000, 1000))
     for n, x, y, w, h in rects:
         fabric[x:x+w, y:y+h] += 1
-    return sum(sum(fabric > 1))
+    return np.sum(fabric > 1)
 
 
 @aoc.test({
@@ -25,5 +25,5 @@ def part_1(data: aoc.Data):
     for n, x, y, w, h in rects:
         fabric[x:x+w, y:y+h] += 1
     for n, x, y, w, h in rects:
-        if sum(sum(fabric[x:x+w, y:y+h] > 1)) == 0:
+        if np.sum(fabric[x:x+w, y:y+h] > 1) == 0:
             return n
