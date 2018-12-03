@@ -11,9 +11,6 @@ fail = click.style('✘', fg='red')
 
 class Data(str):
 
-    def __init__(self, data: str):
-        self = data
-
     @property
     def int_lines(self):
         return [int(x) for x in self.splitlines()]
