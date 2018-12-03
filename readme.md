@@ -1,9 +1,9 @@
 # advent of code 2018
 
-these are my solution along with a framework i am using.
+these are my solutions along with a framework i am using.
 
 it features:
-- fetching of puzzle inputs
+- fetching puzzle inputs
 - helper functions to interpret input
 - test cases runner
 
