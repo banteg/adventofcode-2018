@@ -1,8 +1,8 @@
 import re
+import json
 import click
 import requests
 from os.path import exists
-from config import cookies
 
 
 ok = click.style('✔︎', fg='green')
@@ -38,6 +38,7 @@ def input_name(day):
 
 
 def download_input(day, year=2018):
+    cookies = json.load(open('cookie.json'))
     r = requests.get(f'http://adventofcode.com/{year}/day/{day}/input', cookies=cookies)
     r.raise_for_status()
     with open(input_name(day), 'w') as f:
