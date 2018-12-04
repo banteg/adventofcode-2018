@@ -3,9 +3,7 @@ import aoc
 import pendulum
 from collections import defaultdict, Counter
 
-
-@aoc.test({
-'''[1518-11-01 00:00] Guard #10 begins shift
+example = '''[1518-11-01 00:00] Guard #10 begins shift
 [1518-11-01 00:05] falls asleep
 [1518-11-01 00:25] wakes up
 [1518-11-01 00:30] falls asleep
@@ -21,12 +19,13 @@ from collections import defaultdict, Counter
 [1518-11-04 00:46] wakes up
 [1518-11-05 00:03] Guard #99 begins shift
 [1518-11-05 00:45] falls asleep
-[1518-11-05 00:55] wakes up''': 240
-})
-def part_1(data: aoc.Data):
-    guard_ids = {int(x) for x in re.findall(r'#(\d+)', data)}
+[1518-11-05 00:55] wakes up'''
+
+
+def parse_guards(data):
+    guards = {int(x) for x in re.findall(r'#(\d+)', data)}
     slept = Counter()
-    minutes = {guard: Counter() for guard in guard_ids}
+    minutes = {guard: Counter() for guard in guards}
     for line in sorted(data.splitlines()):
         if 'begins shift' in line:
             ts, guard = re.search(r'\[(.*)\].*?(\d+)', line).groups()
@@ -41,7 +40,20 @@ def part_1(data: aoc.Data):
                 if t == wake_ts:
                     continue
                 minutes[guard][t.minute] += 1
+    return guards, slept, minutes
 
+
+@aoc.test({example: 240})
+def part_1(data: aoc.Data):
+    guards, slept, minutes = parse_guards(data)
     guard = slept.most_common()[0][0]
     minute = minutes[guard].most_common()[0][0]
     return guard * minute
+
+
+@aoc.test({example: 4455})
+def part_2(data: aoc.Data):
+    guards, slept, minutes = parse_guards(data)
+    freqs = {g: minutes[g].most_common()[0] for g in guards if minutes[g]}
+    guard = max(freqs, key=lambda x: freqs[x][1])
+    return guard * freqs[guard][0]
