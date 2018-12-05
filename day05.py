@@ -1,23 +1,16 @@
+from collections import deque
 import aoc
 
 
 def fold(polymer):
-    while True:
-        reactions = []
-        i = 0
-        while i < len(polymer) - 2:
-            a, b = sorted(polymer[i:i+2])
-            if a.lower() == b.lower() and a.isupper() and b.islower():
-                reactions.append(i)
-                i += 2
-            else:
-                i += 1
-
-        for c, i in enumerate(reactions):
-            polymer = polymer[:i-c*2] + polymer[i-c*2+2:]
-
-        if not reactions:
-            return polymer
+    units = {x.lower() for x in polymer}
+    pairs = [u + u.upper() for u in units] + [u.upper() + u for u in units]
+    size = 0
+    while size != len(polymer):
+        size = len(polymer)
+        for reaction in pairs:
+            polymer = polymer.replace(reaction, '')
+    return polymer
 
 
 @aoc.test({'dabAcCaCBAcCcaDA': 10})
