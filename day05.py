@@ -1,18 +1,18 @@
 import aoc
 
+
 def fold(polymer):
     while True:
         reactions = []
-        scan = iter(range(len(polymer) - 1))
-
-        for i in scan:
+        i = 0
+        while i < len(polymer) - 2:
             a, b = sorted(polymer[i:i+2])
-            same_unit = a.lower() == b.lower()
-            different_polarity = a.isupper() and b.islower()
-            if same_unit and different_polarity:
+            if a.lower() == b.lower() and a.isupper() and b.islower():
                 reactions.append(i)
-                next(scan)  # skip next to avoid 'aAa' situation
-        
+                i += 2
+            else:
+                i += 1
+
         for c, i in enumerate(reactions):
             polymer = polymer[:i-c*2] + polymer[i-c*2+2:]
 
@@ -23,3 +23,11 @@ def fold(polymer):
 @aoc.test({'dabAcCaCBAcCcaDA': 10})
 def part_1(data: aoc.Data):
     return len(fold(data))
+
+
+@aoc.test({'dabAcCaCBAcCcaDA': 4})
+def part_2(data: aoc.Data):
+    polymer = fold(data)
+    units = {x.lower() for x in polymer}
+    polymers = (polymer.replace(u, '').replace(u.upper(), '') for u in units)
+    return min(len(fold(p)) for p in polymers)
