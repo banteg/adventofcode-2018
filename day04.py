@@ -1,7 +1,7 @@
 import re
 import aoc
 import pendulum
-from collections import defaultdict, Counter
+from collections import Counter
 
 example = '''[1518-11-01 00:00] Guard #10 begins shift
 [1518-11-01 00:05] falls asleep
