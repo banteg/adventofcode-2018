@@ -20,23 +20,24 @@ def bounds(coordinates):
     return t, l, b, r
 
 
-def closest(x, y, coordinates):
-    distances = Counter({
+def manhattan_distances(x, y, coordinates):
+    return {
         c: abs(x - dx) + abs(y - dy)
         for c, (dx, dy) in enumerate(coordinates, 1)
-    })
-    n = min(distances, key=lambda x: distances[x])
+    }
+
+
+def closest(x, y, coordinates):
+    distances = manhattan_distances(x, y, coordinates)
+    n = min(distances, key=lambda k: distances[k])
     # equally distant locations are ignored
-    if len([x for x in distances if distances[x] == distances[n]]) > 1:
+    if len([k for k in distances if distances[k] == distances[n]]) > 1:
         return 0
     return n
 
 
 def vicinity(x, y, coordinates):
-    distances = Counter({
-        c: abs(x - dx) + abs(y - dy)
-        for c, (dx, dy) in enumerate(coordinates, 1)
-    })
+    distances = manhattan_distances(x, y, coordinates)
     return sum(distances.values())
 
 
