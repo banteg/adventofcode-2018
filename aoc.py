@@ -25,7 +25,10 @@ class Data(str):
 
 def test(cases):
     def decorator(f):
-        day = int(re.search(r'\d+', __import__(f.__module__).__file__).group(0))
+        imported = __import__(f.__module__)
+        if imported.__name__ != '__main__':
+            return f
+        day = int(re.search(r'\d+', imported.__file__).group(0))
         part = f.__name__.split('_')[-1]
         click.secho(f'day {day}, part {part}')
         tests_ok = True
