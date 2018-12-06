@@ -31,7 +31,8 @@ def test(cases):
         tests_ok = True
         for case, expected in cases.items():
             case_pretty = case.replace('\n', ', ')
-            result = f(Data(case))
+            data = Data(case)
+            result = f(data)
             if result == expected:
                 click.secho(f'{ok} {case_pretty} == {result}')
             else:
@@ -39,7 +40,7 @@ def test(cases):
                 tests_ok = False
         if tests_ok:
             data = load_input(day)
-            result = f(Data(data))
+            result = f(data)
             click.secho(f'{result}\n')
         else:
             click.secho('tests failed\n', fg='red')
@@ -64,4 +65,4 @@ def load_input(day):
     name = input_name(day)
     if not exists(name):
         download_input(day)
-    return open(name).read().strip()
+    return Data(open(name).read().strip())
