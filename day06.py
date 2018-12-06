@@ -12,39 +12,32 @@ example = '''1, 1
 
 
 def bounds(coordinates):
-    t = min(coordinates, key=lambda c: c[1])[1]
-    l = min(coordinates, key=lambda c: c[0])[0]
-    b = max(coordinates, key=lambda c: c[1])[1]
-    r = max(coordinates, key=lambda c: c[0])[0]
-    return t, l, b, r
+    x, y = np.array(coordinates).transpose()
+    return y.min(), x.min(), y.max(), x.max()
 
 
 def manhattan_distances(x, y, coordinates):
-    return {
-        c: abs(x - dx) + abs(y - dy)
-        for c, (dx, dy) in enumerate(coordinates, 1)
-    }
+    return [abs(x - dx) + abs(y - dy) for dx, dy in coordinates]
 
 
 def closest(x, y, coordinates):
     distances = manhattan_distances(x, y, coordinates)
-    n = min(distances, key=lambda k: distances[k])
-    # equally distant locations are ignored
-    if len([k for k in distances if distances[k] == distances[n]]) > 1:
+    near = min(distances)
+    if distances.count(near) > 1:
         return 0
-    return n
+    return distances.index(near) + 1
 
 
 def vicinity(x, y, coordinates):
     distances = manhattan_distances(x, y, coordinates)
-    return sum(distances.values())
+    return sum(distances)
 
 
 @aoc.test({example: 17})
 def part_1(data: aoc.Data):
     coordinates = data.ints_lines
     t, l, b, r = bounds(coordinates)
-    area = np.zeros((b - t + 1, r - l + 1))
+    area = np.zeros((b - t + 1, r - l + 1), int)
     for y in range(t, b + 1):
         for x in range(l, r + 1):
             c = closest(x, y, coordinates)
@@ -59,11 +52,11 @@ def part_1(data: aoc.Data):
 @aoc.test({example: 16})
 def part_2(data: aoc.Data):
     coordinates = data.ints_lines
-    max_vicinity = 32 if len(coordinates) == 6 else 10000
     t, l, b, r = bounds(coordinates)
-    area = np.zeros((b - t + 1, r - l + 1))
+    area = np.zeros((b - t + 1, r - l + 1), int)
     for y in range(t, b + 1):
         for x in range(l, r + 1):
             c = vicinity(x, y, coordinates)
             area[y - t][x - l] = c
+    max_vicinity = 32 if data == example else 10000
     return np.sum(area < max_vicinity)
