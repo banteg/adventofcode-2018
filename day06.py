@@ -1,5 +1,4 @@
 import aoc
-from itertools import chain
 from collections import Counter
 import numpy as np
 
@@ -52,7 +51,7 @@ def part_1(data: aoc.Data):
             area[y - t][x - l] = c
     # areas around borders are infinite
     infinite = set(area[0][:]) | set(area[-1][:]) | set(area[:][0]) | set(area[:][-1])
-    areas = Counter(chain.from_iterable(area)).most_common()
+    areas = Counter(area.flatten()).most_common()
     areas = [size for n, size in areas if n not in infinite]
     return areas[0]
 
