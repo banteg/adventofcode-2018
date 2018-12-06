@@ -45,8 +45,8 @@ def part_1(data: aoc.Data):
     # areas around borders are infinite
     infinite = set(area[0][:]) | set(area[-1][:]) | set(area[:][0]) | set(area[:][-1])
     areas = Counter(area.flatten()).most_common()
-    areas = [size for n, size in areas if n not in infinite]
-    return areas[0]
+    non_infinite = [size for n, size in areas if n not in infinite]
+    return non_infinite[0]
 
 
 @aoc.test({example: 16})
