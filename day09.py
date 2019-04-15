@@ -1,8 +1,6 @@
-from collections import defaultdict
-from itertools import count
+from collections import defaultdict, deque
 
 import aoc
-
 
 examples = {
     '9 players; last marble is worth 25 points': 32,
@@ -15,23 +13,27 @@ examples = {
 
 
 def play_marbles(players, last):
-    marbles = [0]
-    hands = defaultdict(set)
-    upcoming = count(1)
-    pos = 0
-    for i in range(1, last + 1):
-        marble = next(upcoming)
+    marbles = deque([0])
+    hands = defaultdict(int)
+    for marble in range(1, last + 1):
         if not marble % 23:
-            hands[i % players].add(marble)
-            pos = (pos - 7) % len(marbles)
-            hands[i % players].add(marbles.pop(pos))
+            hands[marble % players] += marble
+            marbles.rotate(7)
+            hands[marble % players] += marbles.pop()
+            marbles.rotate(-1)
         else:
-            pos = (pos + 2) % len(marbles)
-            marbles.insert(pos, marble)
-    return max(sum(hand) for hand in hands.values())
+            marbles.rotate(-1)
+            marbles.append(marble)
+    return max(hands.values())
 
 
 @aoc.test(examples)
 def part_1(data: aoc.Data):
     players, last = data.ints_lines[0]
     return play_marbles(players, last)
+
+
+@aoc.test({})
+def part_2(data: aoc.Data):
+    players, last = data.ints_lines[0]
+    return play_marbles(players, last * 100)
