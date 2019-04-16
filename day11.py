@@ -10,15 +10,12 @@ examples = {
 
 
 def cell_power(x, y, serial):
-    return (((x + 10) * y + serial) * (x + 10)) % 1000 // 100 - 5
+    rack = x + 10
+    return ((rack * y + serial) * rack) % 1000 // 100 - 5
 
 
 def load_grid(serial):
-    grid = np.zeros((301, 301))
-    for y in range(1, 301):
-        for x in range(1, 301):
-            grid[y][x] = cell_power(x, y, serial)
-    return grid
+    return np.fromfunction(lambda x, y: cell_power(x, y, serial), (301, 301))
 
 
 @aoc.test({})
@@ -50,7 +47,7 @@ def part_2(data: aoc.Data):
                 power = np.sum(grid[y:y + s, x:x + s])
                 if power > best:
                     best, bx, by, bs = power, x, y, s
-        if s > bs + 5:
+        if s >= bs + 5:
             # exit early if no improvement
             break
     return f'{bx},{by},{bs}'
