@@ -1,4 +1,4 @@
-from collections import deque, Counter
+from collections import deque, defaultdict
 from itertools import cycle
 
 import click
@@ -16,6 +16,7 @@ steps = {
 class Car:
 
     def __init__(self, x, y, d):
+        self.id = (x, y)
         self.x = x
         self.y = y
         self.alive = True
@@ -25,7 +26,7 @@ class Car:
         self.actions = cycle(['left', 'straight', 'right'])
 
     def __repr__(self):
-        return f'<Car {self.x},{self.y} {self.d}>'
+        return f'<Car {self.id} {self.x},{self.y} {self.d}>'
 
     @property
     def d(self):
@@ -64,20 +65,30 @@ def render(grid, cars):
     msg = []
     car_coords = {(c.x, c.y): c for c in cars}
     for y, row in enumerate(grid):
-        msg += f'{y:4d}'
+        msg.append(f'{y:4d} ')
         for x, g in enumerate(row):
             if (x, y) in car_coords:
-                msg.append(click.style(car_coords[(x, y)].d, bold=True, fg='green'))
+                msg.append(click.style(car_coords[(x, y)].d, bold=True, fg='green' if car_coords[(x, y)].alive else 'red'))
             else:
                 msg.append(click.style(g, dim=True))
         msg.append('\n')
     print(''.join(msg))
-    input()
 
 
 def detect_crash(cars):
-    (x, y), count = Counter((c.x, c.y) for c in cars).most_common()[0]
-    if count > 1:
+    alive = [c for c in cars if c.alive]
+    coords = defaultdict(list)
+    for c in alive:
+        coords[(c.x, c.y)].append(c)
+
+    crashed = [i for i in coords if len(coords[i]) > 1]
+    for i in  crashed:
+        # print('crash at', i, coords[i])
+        for c in coords[i]:
+            c.alive = False
+
+    if crashed:
+        x, y = crashed[0]
         return f'{x},{y}'
 
 
@@ -87,28 +98,58 @@ def move(grid, cars):
         crashed = detect_crash(cars)
         if crashed:
             return crashed
-    # render(grid, cars)
 
 
-@aoc.test({})
-def part_1(data: aoc.Data):
-    # get car locations
-    grid = data.splitlines()
+def load_cars(grid):
     cars = []
     for y, row in enumerate(grid):
         for x, car in enumerate(row):
             if car in '^v<>':
                 cars.append(Car(x, y, car))
+    return cars
 
-    # recover tracks
+
+def recover_tracks(data):
     tracks = {
         '>': '-',
         '<': '-',
         '^': '|',
         'v': '|',
     }
-    grid = data.translate(str.maketrans(tracks)).splitlines()
+    for car in tracks:
+        data = data.replace(car, tracks[car])
+    return data.splitlines()
+
+
+def eliminate(grid, cars):
+    for car in sorted(cars, key=lambda c: (c.y, c.x)):
+        if car.alive:
+            car.tick(car.look(grid))
+            crashed = detect_crash(cars)
+            # if crashed:
+            #     render(grid, cars)
+
+
+@aoc.test({})
+def part_1(data: aoc.Data):
+    grid = data.splitlines()
+    cars = load_cars(grid)
+
+    grid = recover_tracks(data)
     crashed = False
     while not crashed:
         crashed = move(grid, cars)
     return crashed
+
+
+@aoc.test({})
+def part_2(data: aoc.Data):
+    grid = data.splitlines()
+    cars = load_cars(grid)
+
+    grid = recover_tracks(data)
+    while True:
+        crashed = eliminate(grid, cars)
+        alive = [x for x in cars if x.alive]
+        if len(alive) == 1:
+            return f'{alive[0].x},{alive[0].y}'
