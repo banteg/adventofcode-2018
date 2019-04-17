@@ -1,15 +1,11 @@
 import aoc
 
 
-@aoc.test({
-    'input': 42
-})
+@aoc.test({})
 def part_1(data: aoc.Data):
     return
 
 
-@aoc.test({
-    'input': 42
-})
+@aoc.test({})
 def part_2(data: aoc.Data):
     return
