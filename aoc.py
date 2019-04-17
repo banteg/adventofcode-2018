@@ -68,4 +68,4 @@ def load_input(day):
     name = input_name(day)
     if not exists(name):
         download_input(day)
-    return Data(open(name).read().strip())
+    return Data(open(name).read())
