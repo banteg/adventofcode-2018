@@ -2,15 +2,16 @@ from collections import deque
 from dataclasses import dataclass
 from itertools import chain, count
 
+import numpy as np
+import pyglet
+from pyglet.gl import *
+from PIL import Image
+
 import aoc
 
-examples = {
-    '#######\n#G..#E#\n#E#E.E#\n#G.##.#\n#...#E#\n#...E.#\n#######': 36334,
-    '#######\n#E..EG#\n#.#G.E#\n#E.##E#\n#G..#.#\n#..E#.#\n#######': 39514,
-    '#######\n#E.G#.#\n#.#G..#\n#G.#.G#\n#G..#.#\n#...E.#\n#######': 27755,
-    '#######   \n#.E...#\n#.#..G#\n#.###.#\n#E#G#G#\n#...#G#\n#######': 28944,
-    '#########\n#G......#\n#.E.#...#\n#..##..G#\n#...##..#\n#...#...#\n#.G...G.#\n#.....G.#\n#########': 18740
-}
+
+window = pyglet.window.Window(800, 800, caption='aoc 2018 day 15')
+file_no = count()
 
 
 def reading_order(point):
@@ -186,6 +187,72 @@ class Grid:
             msg += '\n'
         print(msg)
 
+    def render_gl(self, status=None, stats=False):
+        colors = {
+            'G': [163, 190, 140],
+            'E': [180, 142, 173],
+            '.': [236, 239, 244],
+            '#': [59, 66, 82],
+        }
+        data = [['.' for x in range(self.dimensions.x + 1)] for y in range(self.dimensions.y + 1)]
+        for wall in self.walls:
+            data[wall.y][wall.x] = '#'
+        for unit in self.alive_units:
+            data[unit.pos.y][unit.pos.x] = unit.symbol
+
+        col = [[colors[x] for x in row] for row in data]
+        arr = np.array(col)
+        arr = np.flip(arr, 0)
+        img = Image.fromarray(arr.astype(np.uint8))
+        # img.save(f'renders/{next(file_no):04d}.png')
+        w, h, d = arr.shape
+        im = pyglet.image.ImageData(w, h, 'RGB', img.tobytes())
+        window.dispatch_events()
+        window.switch_to()
+        window.clear()
+        scale = min(window.width / im.texture.width, window.height / im.texture.height)
+        im.texture.width *= scale
+        im.texture.height *= scale
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        im.blit(0, 0)
+
+        # render text
+        if stats:
+            for unit in self.alive_units:
+                hp_label = pyglet.text.Label(
+                    f'{unit.hp}',
+                    font_name='Helvetica',
+                    font_size=8,
+                    x=unit.pos.x * scale + scale * 0.05,
+                    y=window.height - unit.pos.y * scale - scale * 0.95,
+                    anchor_x='left', anchor_y='bottom', color=(236, 239, 244, 255),
+                )
+                hp_label.draw()
+
+                dmg_label = pyglet.text.Label(
+                    f'{unit.dmg}',
+                    font_name='Helvetica',
+                    font_size=8,
+                    x=unit.pos.x * scale + scale * 0.95,
+                    y=window.height - unit.pos.y * scale - scale * 0.05,
+                    anchor_x='right', anchor_y='top', color=(236, 239, 244, 255),
+                )
+                dmg_label.draw()
+
+        if status:
+            label = pyglet.text.Label(
+                f'{status}',
+                font_name='Helvetica',
+                font_size=12,
+                x=scale,
+                y=window.height - scale,
+                anchor_x='left', anchor_y='top',
+                color=(236, 239, 244, 255),
+            )
+            label.draw()
+
+        window.flip()
+
 
 @dataclass
 class Simulation:
@@ -195,17 +262,20 @@ class Simulation:
     def run(self, verbose=False):
         if verbose:
             print('Initially:')
-            self.grid.render()
+            self.render()
         while True:
             outcome = self.tick()
             if outcome:
                 if verbose:
                     print(f'Outcome:')
-                    self.grid.render()
+                    self.render()
                 return outcome
             if verbose:
                 print(f'After {self.rounds} rounds:')
-                self.grid.render()
+                self.render()
+
+    def render(self):
+        self.grid.render_gl(f'round={self.rounds}')
 
     def tick(self):
         turns = len(self.grid.turn_order)
@@ -236,7 +306,8 @@ class Simulation2:
 
     def run(self, verbose=True):
         for dmg in count(4):
-            print(f'checking damage = {dmg}')
+            if verbose:
+                print(f'checking damage = {dmg}')
             self.rounds = 0
             self.grid = Grid.from_string(self.data)
             self.elves = [x for x in self.grid.units if x.symbol == 'E']
@@ -245,23 +316,28 @@ class Simulation2:
             # run2
             if verbose:
                 print('Initially:')
-                self.grid.render()
+                self.render(dmg)
             elves_ok = True
             while elves_ok:
                 try:
                     outcome = self.tick()
                 except ElfDied:
-                    print('elf died, trying next...')
                     elves_ok = False
+                    if verbose:
+                        print('elf died, trying next...')
+                        self.render(dmg)
                     continue
                 if outcome:
                     if verbose:
                         print(f'Outcome:')
-                        self.grid.render()
+                        self.render(dmg)
                     return outcome
                 if verbose:
                     print(f'After {self.rounds} rounds:')
-                    self.grid.render()
+                    self.render(dmg)
+
+    def render(self, dmg):
+        self.grid.render_gl(f'dmg={dmg} round={self.rounds}')
 
     def tick(self):
         turns = len(self.grid.turn_order)
@@ -280,14 +356,23 @@ class Simulation2:
         others_dead = not any(x.alive for x in self.grid.units if x.symbol != 'E')
         if elves_alive and others_dead:
             hp = sum(unit.hp for unit in self.elves)
-            print(f'hp={hp}, rounds={self.rounds}')
+            # print(f'hp={hp}, rounds={self.rounds}')
             return hp * self.rounds
+
+
+examples = {
+    '#######\n#G..#E#\n#E#E.E#\n#G.##.#\n#...#E#\n#...E.#\n#######': 36334,
+    '#######\n#E..EG#\n#.#G.E#\n#E.##E#\n#G..#.#\n#..E#.#\n#######': 39514,
+    '#######\n#E.G#.#\n#.#G..#\n#G.#.G#\n#G..#.#\n#...E.#\n#######': 27755,
+    '#######   \n#.E...#\n#.#..G#\n#.###.#\n#E#G#G#\n#...#G#\n#######': 28944,
+    '#########\n#G......#\n#.E.#...#\n#..##..G#\n#...##..#\n#...#...#\n#.G...G.#\n#.....G.#\n#########': 18740
+}
 
 
 @aoc.test(examples)
 def part_1(data: aoc.Data):
     sim = Simulation(Grid.from_string(data))
-    return sim.run(verbose=True)
+    return sim.run(verbose=False)
 
 
 examples2 = {
@@ -301,4 +386,4 @@ examples2 = {
 @aoc.test(examples2)
 def part_2(data: aoc.Data):
     sim = Simulation2(data)
-    return sim.run(verbose=True)
+    return sim.run(verbose=False)
