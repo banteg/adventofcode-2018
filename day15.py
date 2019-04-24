@@ -101,6 +101,8 @@ class Grid:
 
     def move(self, unit: Unit):
         '''unit can either 1) attack or 2) move then attack'''
+        if not unit.alive:
+            return
         attacked = self.melee(unit)
         if attacked:
             return  # end turn
@@ -201,16 +203,16 @@ class Simulation:
                     print(f'Outcome:')
                     self.grid.render()
                 return outcome
-            self.rounds += 1
             if verbose:
                 print(f'After {self.rounds} rounds:')
                 self.grid.render()
 
     def tick(self):
-        for unit in self.grid.turn_order:
-            if not unit.alive:
-                continue
+        turns = len(self.grid.turn_order)
+        for i, unit in enumerate(self.grid.turn_order):
             self.grid.move(unit)
+            if i == turns - 1:
+                self.rounds += 1
             outcome = self.check_outcome()
             if outcome:
                 return outcome
