@@ -1,116 +1,20 @@
 from collections import deque
 from dataclasses import dataclass
-from heapq import heappush, heappop
 from itertools import chain
-from time import time
-
-import numpy as np
-import pyglet
-from PIL import Image
-from pyglet.gl import *
 
 import aoc
 
 examples = {
-'''\
-#######
-#G..#E#
-#E#E.E#
-#G.##.#
-#...#E#
-#...E.#
-#######''': 36334,
-
-'''\
-#######
-#E..EG#
-#.#G.E#
-#E.##E#
-#G..#.#
-#..E#.#
-#######''': 39514,
-
-'''\
-#######
-#E.G#.#
-#.#G..#
-#G.#.G#
-#G..#.#
-#...E.#
-#######''': 27755,
-
-'''\
-#######   
-#.E...#
-#.#..G#
-#.###.#
-#E#G#G#
-#...#G#
-#######''': 28944,
-
-'''\
-#########
-#G......#
-#.E.#...#
-#..##..G#
-#...##..#
-#...#...#
-#.G...G.#
-#.....G.#
-#########''': 18740,
-}
-
-examples = {
-'''\
-#########
-#G..G..G#
-#.......#
-#.......#
-#G..E..G#
-#.......#
-#.......#
-#G..G..G#
-#########''': 1
+    '#######\n#G..#E#\n#E#E.E#\n#G.##.#\n#...#E#\n#...E.#\n#######': 36334,
+    '#######\n#E..EG#\n#.#G.E#\n#E.##E#\n#G..#.#\n#..E#.#\n#######': 39514,
+    '#######\n#E.G#.#\n#.#G..#\n#G.#.G#\n#G..#.#\n#...E.#\n#######': 27755,
+    '#######   \n#.E...#\n#.#..G#\n#.###.#\n#E#G#G#\n#...#G#\n#######': 28944,
+    '#########\n#G......#\n#.E.#...#\n#..##..G#\n#...##..#\n#...#...#\n#.G...G.#\n#.....G.#\n#########': 18740
 }
 
 
-'''
-Here's a few examples that will fail for common errors on this problem:
-#######
-#######
-#.E..G#
-#.#####
-#G#####
-#######
-#######
-In this first case, the Elf should move to the right.
-####
-#GG#
-#.E#
-####
-With this input, the elf should begin by attacking the goblin directly above him.
-#######
-#######
-#####G#
-#..E..#
-#G#####
-#######
-#######
-For this input, the elf should move to the left.
-'''
-
-
-window = pyglet.window.Window(500, 500, caption='aoc 2018 day 15')
-
-
-def took(f):
-    def decorator(*args, **kwds):
-        start = time()
-        result = f(*args, **kwds)
-        print(f'{f.__name__} took {time() - start:.3f}s')
-        return result
-
-    return decorator
+def reading_order(point):
+    return point.y, point.x
 
 
 def flat(it):
@@ -122,21 +26,23 @@ class Point:
     x: int
     y: int
 
-    @property
-    def neighbours(self):
-        return [self + delta for delta in [Point(0, -1), Point(-1, 0), Point(1, 0), Point(0, 1)]]
-
     def __add__(self, other):
         return Point(self.x + other.x, self.y + other.y)
 
-    def __lt__(self, other):
-        return (self.y, self.x) < (other.y, other.x)
-
-    def __repr__(self):
-        return f'Point({self.x}, {self.y})'
+    def __eq__(self, other):
+        return (self.x, self.y) == (other.x, other.y)
 
     def __hash__(self):
         return hash((self.x, self.y))
+
+    @property
+    def near(self):
+        return [
+            self + Point(0, -1),
+            self + Point(-1, 0),
+            self + Point(1, 0),
+            self + Point(0, 1),
+        ]
 
 
 @dataclass
@@ -146,225 +52,178 @@ class Unit:
     hp: int = 200
     dmg: int = 3
 
+    def __getattr__(self, item):
+        return getattr(self.pos, item)
+
     @property
     def alive(self):
         return self.hp > 0
 
-    def __repr__(self):
-        return f'<{self.symbol} ({self.pos}) {self.hp} hp>'
+    def foe(self, other):
+        return self.symbol != other.symbol
 
-    def __hash__(self):
-        return hash((self.pos, self.symbol, self.hp, self.dmg))
+    def attack(self, other):
+        other.hp -= self.dmg
 
-
-def reading_order(p):
-    if isinstance(p, Unit):
-        p = p.pos
-    return p.y, p.x
+    def targets(self, others):
+        return [x for x in others if self.foe(x) and x.alive]
 
 
-class Simulation:
+@dataclass
+class Grid:
+    walls: [Point]
+    units: [Unit]
 
-    def __init__(self, data):
-        self.units = set()
-        self.walls = set()
-        for y, row in enumerate(data.splitlines()):
+    @classmethod
+    def from_string(cls, data):
+        if isinstance(data, str):
+            data = data.splitlines()
+        walls, units = [], []
+        for y, row in enumerate(data):
             for x, symbol in enumerate(row):
                 if symbol == '#':
-                    self.walls.add(Point(x, y))
+                    walls.append(Point(x, y))
                 if symbol in 'EG':
-                    self.units.add(Unit(Point(x, y), symbol))
-        self.bounds = x, y
-        self.rounds = 0
-
-    def run(self):
-        self.render_gl()
-        while True:
-            result = self.tick()
-            if result:
-                return result
+                    units.append(Unit(Point(x, y), symbol))
+        self = cls(walls, units)
+        self.dimensions = Point(x, y)
+        return self
 
     @property
-    def has_ended(self):
-        return len({x.symbol for x in self.units if x.alive}) == 1
+    def turn_order(self) -> [Unit]:
+        return sorted(self.alive_units, key=reading_order)
 
-    def is_wall(self, pos):
-        walls = self.walls | {unit.pos for unit in self.units if unit.alive}
-        return pos in walls
+    @property
+    def alive_units(self) -> [Unit]:
+        return [x for x in self.units if x.alive]
+
+    def move(self, unit: Unit):
+        # 1. attack if in range
+        target = self.melee(unit)
+        if target is not None:
+            unit.attack(target)
+            return  # end turn
+        # 2. move if possible
+        targets = unit.targets(self.units)
+        poi = flat(self.passable(target.near) for target in targets)
+        chosen = self.breadth_search(unit.pos, poi)
+        if chosen:
+            unit.pos = chosen
+        # melee attack
+        if chosen:
+            target = self.melee(unit)
+            if target is not None:
+                unit.attack(target)
+
+    def melee(self, unit: Unit):
+        '''choose nearest unit with the lowest hp'''
+        targets = [x for x in unit.targets(self.alive_units) if x in unit.near]
+        try:
+            fewest_hp = min(x.hp for x in targets)
+        except ValueError:
+            return
+        chosen = [x for x in targets if x.hp == fewest_hp]
+        return sorted(chosen, key=reading_order)[0]
+
+    def breadth_search(self, start: Point, targets: [Point]):
+        frontier = deque([(0, start)])  # dist, pos
+        visited = {start}
+        meta = {start: (0, None)}  # dist, came_from
+        while frontier:
+            dist, pos = frontier.popleft()
+            for n in self.passable(pos.near):
+                if n in visited:
+                    continue
+                if n not in meta or meta[n] > (dist + 1, pos):
+                    if n in meta and meta[n] > (dist + 1, pos):
+                        print(f'n={n} added to meta ({dist + 1}, {pos}), was {meta.get(n)}')
+                    meta[n] = dist + 1, pos
+                visited.add(n)
+                frontier.append((dist + 1, n))
+
+        reachable = [(dist, pos) for pos, (dist, _) in meta.items() if pos in targets]
+        try:
+            min_dist = min(dist for dist, pos in reachable)
+        except ValueError:
+            return
+        closest = [pos for dist, pos in reachable if dist == min_dist]
+        nearest = sorted(closest, key=reading_order)
+        # start debug
+        debug_cost = {p: str(dist) for p, (dist, _) in meta.items()}
+        debug_near = {p: '!' for p in nearest}
+        #         self.render({**debug_cost, **debug_near})
+        # end debug
+        chosen = nearest[0]
+        while meta[chosen][0] > 1:
+            chosen = meta[chosen][1]
+        return chosen
 
     def passable(self, points):
-        return [point for point in points if not self.is_wall(point)]
+        return [point for point in points if point not in self.walls + self.alive_units]
 
-    # @took
+    def locate(self, point):
+        if point in self.walls:
+            return '#'
+        units = {unit.pos: unit for unit in self.alive_units}
+        if point in units:
+            return units[point].symbol
+        return '.'
+
+    def render(self, extra=None):
+        extra = {} if extra is None else extra
+        msg = ''
+        hp = []
+        for y in range(self.dimensions.y + 1):
+            hp = [f'{unit.symbol}({unit.hp})' for unit in sorted(self.alive_units, key=reading_order) if unit.y == y]
+            for x in range(self.dimensions.x + 1):
+                point = Point(x, y)
+                msg += extra.get(point, self.locate(point))
+            msg += '  ' + ', '.join(hp)
+            msg += '\n'
+        print(msg)
+
+
+@dataclass
+class Simulation:
+    grid: Grid
+    rounds: int = 0
+
+    def run(self, verbose=False):
+        if verbose:
+            print('Initially:')
+            self.grid.render()
+        while True:
+            outcome = self.tick()
+            if outcome:
+                if verbose:
+                    print(f'Outcome:')
+                    self.grid.render()
+                return outcome
+            self.rounds += 1
+            if verbose:
+                print(f'After {self.rounds} rounds:')
+                self.grid.render()
+
     def tick(self):
-        self.render_gl()
-        # print(f'--tick {self.rounds}--')
-        for i, unit in enumerate(sorted(self.units, key=reading_order)):
-            if self.has_ended:
-                winners = {x.symbol for x in self.units if x.alive}.pop()
-                winning_hp = sum(unit.hp for unit in self.units if unit.alive and unit.symbol == winners)
-                print(self.rounds, winning_hp)
-                return self.rounds * winning_hp
-
+        for unit in self.grid.turn_order:
             if not unit.alive:
                 continue
-            # print(f'({i+1}/{len(self.units)}) {unit}')
-            targets = [x for x in self.units if unit.symbol != x.symbol and x.alive]
+            self.grid.move(unit)
+            outcome = self.check_outcome()
+            if outcome:
+                return outcome
 
-            # attack if in range
-            melee = [x for x in targets if x.pos in unit.pos.neighbours]
-            if melee:
-                target = sorted(melee, key=reading_order)[0]
-                target.hp -= unit.dmg
-                # print(f'attack {target}')
-                continue
-
-            # walk towards nearest target
-            in_range = flat(self.passable(t.pos.neighbours) for t in targets)
-
-            came_from = self.breadth_search(unit.pos)
-
-            paths = [self.reconstruct_path(came_from, g) for g in in_range]
-            print(paths)
-
-            if unit.symbol == 'E':
-                print('xx', [p for p in paths if p[-1] == (4, 3)])
-                self.render_gl(in_range)
-                input()
-
-            scores = [(len(path), path[1]) for path in paths if path and len(path) > 1]
-            ways = {p for s, p in scores}
-            print(ways)
-            sco = {w: min(s for s, p in scores if w == p) for w in ways}
-            print('sco', sco)
-            # grid = [Point(x, y) for x in range(self.bounds[0]) for y in range(self.bounds[1])]
-            # sco = {p: self.reconstruct_path(came_from, p) for p in grid}
-            # sco = {p: len(sco[p]) for p in sco if sco[p]}
-            # print(sco)
-            self.render_gl(scores=sco, coords=True)
-            # input()
-            if scores:
-                print(sorted(scores))
-                best = min(s for s, p in scores)
-                print(unit, sorted(p for s, p in scores if s == best))
-                unit.pos = sorted(scores)[0][1]
-                continue
-        self.rounds += 1
-
-    def breadth_search(self, start: Point):
-        frontier = deque([start])
-        visited = {start}
-        came_from = {start: None}
-        while frontier:
-            pos = frontier.popleft()
-            for n in self.passable(pos.neighbours):
-                if n not in came_from:
-                    came_from[n] = pos
-                if n not in visited:
-                    frontier.append(n)
-                    visited.add(n)
-            self.render_gl(visited, frontier)
-        return came_from
-
-    def reconstruct_path(self, came_from, goal):
-        if goal not in came_from:
-            return None
-        path = []
-        c = came_from[goal]
-        while c:
-            path.insert(0, c)
-            c = came_from[c]
-        return path
-
-    def render_gl(self, red=None, yellow=None, scores=None, coords=False):
-        colors = {
-            'G': [163, 190, 140],
-            'E': [180, 142, 173],
-            '.': [236, 239, 244],
-            '#': [59, 66, 82],
-            '!': [191, 97, 106],
-            '@': [235, 203, 139],
-        }
-        w, h = self.bounds
-        data = [['.' for x in range(w + 1)] for y in range(h + 1)]
-        for wall in self.walls:
-            data[wall.y][wall.x] = '#'
-        for p in red or []:
-            data[p.y][p.x] = '!'
-        for p in yellow or []:
-            data[p.y][p.x] = '@'
-        for unit in self.units:
-            data[unit.pos.y][unit.pos.x] = unit.symbol
-
-        col = [[colors[x] for x in row] for row in data]
-        arr = np.array(col)
-        arr = np.flip(arr, 0)
-        img = Image.fromarray(arr.astype(np.uint8))
-        w, h, d = arr.shape
-        im = pyglet.image.ImageData(w, h, 'RGB', img.tobytes())
-        window.dispatch_events()
-        window.switch_to()
-        window.clear()
-        scale = min(window.width / im.texture.width, window.height / im.texture.height)
-        im.texture.width *= scale
-        im.texture.height *= scale
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        im.blit(0, 0)
-
-        # render text
-        for unit in self.units:
-            label = pyglet.text.Label(
-                f'{unit.hp}',
-                font_name='Helvetica',
-                font_size=8,
-                x=unit.pos.x * scale + scale / 2,
-                y=window.height - unit.pos.y * scale - scale / 2,
-                anchor_x='center', anchor_y='center', color=(236, 239, 244, 255),
-            )
-            label.draw()
-
-        # coords
-        if coords:
-            for x in range(w + 1):
-                for y in range(h + 1):
-                    label = pyglet.text.Label(
-                        f'{x},{y}',
-                        font_name='Helvetica',
-                        font_size=8,
-                        x=x * scale + scale / 2,
-                        y=window.height - y * scale - scale,
-                        anchor_x='center', anchor_y='bottom', color=(0, 0, 0, 255),
-                    )
-                    label.draw()
-
-        if scores:
-            for p in scores:
-                label = pyglet.text.Label(
-                    f'{scores[p]}',
-                    font_name='Helvetica',
-                    font_size=12,
-                    x=p.x * scale + scale / 2,
-                    y=window.height - p.y * scale - scale / 2,
-                    anchor_x='center', anchor_y='center', color=(0, 0, 200, 255),
-                )
-                label.draw()
-
-        # round
-        label = pyglet.text.Label(
-            f'round {self.rounds}',
-            font_name='Helvetica',
-            font_size=12,
-            x=window.width / 2,
-            y=window.height - scale / 2,
-            anchor_x='center', anchor_y='center',
-            color=(236, 239, 244, 255),
-        )
-        label.draw()
-
-        window.flip()
+    def check_outcome(self):
+        factions = {x.symbol for x in self.grid.alive_units}
+        if len(factions) == 1:
+            winners = factions.pop()
+            print([unit.hp for unit in self.grid.alive_units])
+            hp = sum(unit.hp for unit in self.grid.alive_units if unit.symbol == winners)
+            print(f'outcome: rounds={self.rounds}, hp={hp}')
+            return hp * self.rounds
 
 
 @aoc.test(examples)
 def part_1(data: aoc.Data):
-    sim = Simulation(data)
-    return sim.run()
+    sim = Simulation(Grid.from_string(data))
+    return sim.run(verbose=True)
