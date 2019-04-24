@@ -87,6 +87,7 @@ class Grid:
                     units.append(Unit(Point(x, y), symbol))
         self = cls(walls, units)
         self.dimensions = Point(x, y)
+        self.update_passable_cache()
         return self
 
     @property
@@ -98,22 +99,13 @@ class Grid:
         return [x for x in self.units if x.alive]
 
     def move(self, unit: Unit):
-        # 1. attack if in range
-        target = self.melee(unit)
-        if target is not None:
-            unit.attack(target)
+        '''unit can either 1) attack or 2) move then attack'''
+        attacked = self.melee(unit)
+        if attacked:
             return  # end turn
-        # 2. move if possible
-        targets = unit.targets(self.units)
-        poi = flat(self.passable(target.near) for target in targets)
-        chosen = self.breadth_search(unit.pos, poi)
-        if chosen:
-            unit.pos = chosen
-        # melee attack
-        if chosen:
-            target = self.melee(unit)
-            if target is not None:
-                unit.attack(target)
+        moved = self.find_move(unit)
+        if moved:
+            self.melee(unit)
 
     def melee(self, unit: Unit):
         '''choose nearest unit with the lowest hp'''
@@ -122,8 +114,20 @@ class Grid:
             fewest_hp = min(x.hp for x in targets)
         except ValueError:
             return
-        chosen = [x for x in targets if x.hp == fewest_hp]
-        return sorted(chosen, key=reading_order)[0]
+        tied = [x for x in targets if x.hp == fewest_hp]
+        target = sorted(tied, key=reading_order)[0]
+        unit.attack(target)
+        if target.hp <= 0:
+            self.update_passable_cache()
+        return True
+
+    def find_move(self, unit):
+        targets = flat(target.near for target in unit.targets(self.units))
+        chosen = self.breadth_search(unit.pos, self.passable(targets))
+        if chosen:
+            unit.pos = chosen
+            self.update_passable_cache()
+            return True
 
     def breadth_search(self, start: Point, targets: [Point]):
         frontier = deque([(0, start)])  # dist, pos
@@ -135,8 +139,6 @@ class Grid:
                 if n in visited:
                     continue
                 if n not in meta or meta[n] > (dist + 1, pos):
-                    if n in meta and meta[n] > (dist + 1, pos):
-                        print(f'n={n} added to meta ({dist + 1}, {pos}), was {meta.get(n)}')
                     meta[n] = dist + 1, pos
                 visited.add(n)
                 frontier.append((dist + 1, n))
@@ -148,18 +150,18 @@ class Grid:
             return
         closest = [pos for dist, pos in reachable if dist == min_dist]
         nearest = sorted(closest, key=reading_order)
-        # start debug
-        debug_cost = {p: str(dist) for p, (dist, _) in meta.items()}
-        debug_near = {p: '!' for p in nearest}
-        #         self.render({**debug_cost, **debug_near})
-        # end debug
         chosen = nearest[0]
         while meta[chosen][0] > 1:
             chosen = meta[chosen][1]
         return chosen
 
+    def update_passable_cache(self):
+        units = [unit.pos for unit in self.alive_units]
+        self.cant_pass = set(self.walls + units)
+
     def passable(self, points):
-        return [point for point in points if point not in self.walls + self.alive_units]
+        '''filter passable points using cache'''
+        return [point for point in points if point not in self.cant_pass]
 
     def locate(self, point):
         if point in self.walls:
@@ -172,7 +174,6 @@ class Grid:
     def render(self, extra=None):
         extra = {} if extra is None else extra
         msg = ''
-        hp = []
         for y in range(self.dimensions.y + 1):
             hp = [f'{unit.symbol}({unit.hp})' for unit in sorted(self.alive_units, key=reading_order) if unit.y == y]
             for x in range(self.dimensions.x + 1):
@@ -217,13 +218,11 @@ class Simulation:
         factions = {x.symbol for x in self.grid.alive_units}
         if len(factions) == 1:
             winners = factions.pop()
-            print([unit.hp for unit in self.grid.alive_units])
             hp = sum(unit.hp for unit in self.grid.alive_units if unit.symbol == winners)
-            print(f'outcome: rounds={self.rounds}, hp={hp}')
             return hp * self.rounds
 
 
 @aoc.test(examples)
 def part_1(data: aoc.Data):
     sim = Simulation(Grid.from_string(data))
-    return sim.run(verbose=True)
+    return sim.run(verbose=False)
