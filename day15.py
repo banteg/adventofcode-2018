@@ -1,6 +1,6 @@
 from collections import deque
 from dataclasses import dataclass
-from itertools import chain
+from itertools import chain, count
 
 import aoc
 
@@ -225,7 +225,80 @@ class Simulation:
             return hp * self.rounds
 
 
+class ElfDied(Exception):
+    pass
+
+
+@dataclass
+class Simulation2:
+    data: str
+    rounds: int = 0
+
+    def run(self, verbose=True):
+        for dmg in count(4):
+            print(f'checking damage = {dmg}')
+            self.rounds = 0
+            self.grid = Grid.from_string(self.data)
+            self.elves = [x for x in self.grid.units if x.symbol == 'E']
+            for unit in self.elves:
+                unit.dmg = dmg
+            # run2
+            if verbose:
+                print('Initially:')
+                self.grid.render()
+            elves_ok = True
+            while elves_ok:
+                try:
+                    outcome = self.tick()
+                except ElfDied:
+                    print('elf died, trying next...')
+                    elves_ok = False
+                    continue
+                if outcome:
+                    if verbose:
+                        print(f'Outcome:')
+                        self.grid.render()
+                    return outcome
+                if verbose:
+                    print(f'After {self.rounds} rounds:')
+                    self.grid.render()
+
+    def tick(self):
+        turns = len(self.grid.turn_order)
+        for i, unit in enumerate(self.grid.turn_order):
+            self.grid.move(unit)
+            if i == turns - 1:
+                self.rounds += 1
+            outcome = self.check_outcome()
+            if outcome:
+                return outcome
+
+    def check_outcome(self):
+        elves_alive = all(x.alive for x in self.elves)
+        if not elves_alive:
+            raise ElfDied()
+        others_dead = not any(x.alive for x in self.grid.units if x.symbol != 'E')
+        if elves_alive and others_dead:
+            hp = sum(unit.hp for unit in self.elves)
+            print(f'hp={hp}, rounds={self.rounds}')
+            return hp * self.rounds
+
+
 @aoc.test(examples)
 def part_1(data: aoc.Data):
     sim = Simulation(Grid.from_string(data))
-    return sim.run(verbose=False)
+    return sim.run(verbose=True)
+
+
+examples2 = {
+    '#######\n#.G...#\n#...EG#\n#.#.#G#\n#..G#E#\n#.....#\n#######': 4988,
+    '#######\n#E..EG#\n#.#G.E#\n#E.##E#\n#G..#.#\n#..E#.#\n#######': 31284,
+    '#######\n#E.G#.#\n#.#G..#\n#G.#.G#\n#G..#.#\n#...E.#\n#######': 3478,
+    '#######\n#.E...#\n#.#..G#\n#.###.#\n#E#G#G#\n#...#G#\n#######': 6474,
+    '#########\n#G......#\n#.E.#...#\n#..##..G#\n#...##..#\n#...#...#\n#.G...G.#\n#.....G.#\n#########': 1140,
+}
+
+@aoc.test(examples2)
+def part_2(data: aoc.Data):
+    sim = Simulation2(data)
+    return sim.run(verbose=True)
