@@ -78,11 +78,12 @@ class Grid:
     def from_string(cls, data):
         if isinstance(data, str):
             data = data.splitlines()
-        walls, units = [], []
+        walls = set()
+        units = []  # units are mutable, so hashing is unsafe
         for y, row in enumerate(data):
             for x, symbol in enumerate(row):
                 if symbol == '#':
-                    walls.append(Point(x, y))
+                    walls.add(Point(x, y))
                 if symbol in 'EG':
                     units.append(Unit(Point(x, y), symbol))
         self = cls(walls, units)
@@ -156,8 +157,8 @@ class Grid:
         return chosen
 
     def update_passable_cache(self):
-        units = [unit.pos for unit in self.alive_units]
-        self.cant_pass = set(self.walls + units)
+        units = {unit.pos for unit in self.alive_units}
+        self.cant_pass = self.walls | units
 
     def passable(self, points):
         '''filter passable points using cache'''
