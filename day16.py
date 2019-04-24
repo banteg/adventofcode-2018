@@ -18,13 +18,13 @@ def bori(r, a, b): return r[a] | b
 def setr(r, a, b): return r[a]
 def seti(r, a, b): return a
 
-def gtir(r, a, b): return 1 if a > r[b] else 0
-def grti(r, a, b): return 1 if r[a] > b else 0
-def gtrr(r, a, b): return 1 if r[a] > r[b] else 0
+def gtir(r, a, b): return int(a > r[b])
+def grti(r, a, b): return int(r[a] > b)
+def gtrr(r, a, b): return int(r[a] > r[b])
 
-def eqir(r, a, b): return 1 if a == r[b] else 0
-def eqri(r, a, b): return 1 if r[a] == b else 0
-def eqrr(r, a, b): return 1 if r[a] == r[b] else 0
+def eqir(r, a, b): return int(a == r[b])
+def eqri(r, a, b): return int(r[a] == b)
+def eqrr(r, a, b): return int(r[a] == r[b])
 
 
 opcodes = [
