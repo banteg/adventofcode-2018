@@ -1,14 +1,16 @@
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import Union
-from itertools import product, chain
+from itertools import product, chain, count
 from operator import attrgetter
 
-from click import style
+import numpy as np
+from PIL import Image
 
 import aoc
 
 reading_order = attrgetter('y', 'x')
 stable_states = {'clay', 'still'}
+frame = count()
 
 
 @dataclass
@@ -89,12 +91,15 @@ class Clay:
             yield Point(x, y)
 
 
-
 class Grid(dict):
-    
-    @property
-    def clay(self):
-        return {p for p in self if self[p] == 'clay'}
+
+    def __init__(self, data):
+        super().__init__(data)
+        # cache clay and clay per row
+        self.clay = {p for p in self if self[p] == 'clay'}
+        self.clay_on_row = defaultdict(set)
+        for p in self.clay:
+            self.clay_on_row[p.y].add(p)
 
     @property
     def still(self):
@@ -104,12 +109,6 @@ class Grid(dict):
     def flowing(self):
         return {p for p in self if self[p] == 'flowing'}
 
-    @property
-    def occupied(self):
-        return self.clay | self.still
-
-
-
 
 def render(grid, bounds, extra=None):
     if extra is None:
@@ -118,37 +117,59 @@ def render(grid, bounds, extra=None):
     symbols = {
         'clay': '#',
         'tap': '+',
-        'flowing': style('|', fg='blue', bold=True),
-        'still': style('~', fg='blue', bold=True),
-        None: style('.', dim=True),
+        'flowing': '|',
+        'still': '~',
+        None: '.',
     }
     for row in bounds.to_points():
         for p in row:
             if p in extra:
-                msg += style('*', fg='green', bold=True)
+                msg += '*'
             else:
                 msg += symbols.get(grid.get(p, None))
         msg += '\n'
     print(msg)
 
 
+def render_image(grid, bounds):
+    colors = {
+        'clay': [59, 66, 82],
+        'tap': [180, 142, 173],
+        'flowing': [129, 161, 193],
+        'still': [94, 129, 172],
+        None: [236, 239, 244],
+    }
+    data = []
+    for row in bounds.to_points():
+        data.append([])
+        for p in row:
+            data[-1].append(colors.get(grid.get(p, None)))
+    arr = np.array(data)
+    img = Image.fromarray(arr.astype(np.uint8))
+    w, h = img.size
+    img = img.resize((w * 8, h * 8))
+    img.save(f'renders/{next(frame):04d}.png')
+
+
 def spread_water(grid, bounds):
+    occupied = grid.clay | grid.still
+
     # flow down
     for water in grid.flowing:
         fill = water.below
-        while fill in bounds and fill not in grid.occupied:
+        while fill in bounds and fill not in occupied:
             grid[fill] = 'flowing'
             fill = fill.below
 
     # stabilize still water
     for water in grid.flowing:
-        if water.below in grid.occupied:
+        if water.below in occupied:
             try:
                 fill = Bounds(
                     t=water.y,
                     b=water.y,
-                    l=max(p.x + 1 for p in grid.clay if p.y == water.y and p.x < water.x),
-                    r=min(p.x - 1 for p in grid.clay if p.y == water.y and p.x > water.x),
+                    l=max(p.x + 1 for p in grid.clay_on_row[water.y] if p.x < water.x),
+                    r=min(p.x - 1 for p in grid.clay_on_row[water.y] if p.x > water.x),
                 )
             except ValueError:  # no clay at this level
                 continue
@@ -166,31 +187,29 @@ def spread_water(grid, bounds):
     # flow to the sides
     for water in grid.flowing:
         stable = grid.get(water.below) in stable_states
-        if stable and water.left not in grid.occupied:
+        if stable and water.left not in occupied:
             grid[water.left] = 'flowing'
-        if stable and water.right not in grid.occupied:
+        if stable and water.right not in occupied:
             grid[water.right] = 'flowing'
 
 
 def simulate(data, vis=False):
-    gravity = Point(0, 1)
     clay = [Clay.from_string(x) for x in data.splitlines()]
     grid = Grid({p: 'clay' for p in chain.from_iterable(clay)})
-    bounds = Bounds.from_points(grid)
     tap = Point(500, 0)
     grid[tap] = 'tap'
     grid[tap.below] = 'flowing'
+    bounds = Bounds.from_points(grid)
+    if vis:
+        render_image(grid, bounds)
 
-    # produce water
     last = None
-    for i in range(10):
-    # while grid != last:
+    while grid != last:
         last = grid.copy()
         spread_water(grid, bounds)
         if vis:
-            render(grid, bounds)
-        else:
-            print(i, len(grid.still | grid.flowing))
+            render_image(grid, bounds)
+        print(len(grid.still | grid.flowing))
     return len(grid.still | grid.flowing)
 
 
