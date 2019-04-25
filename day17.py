@@ -186,11 +186,16 @@ def spread_water(grid, bounds):
 
     # flow to the sides
     for water in grid.flowing:
-        stable = grid.get(water.below) in stable_states
-        if stable and water.left not in occupied:
-            grid[water.left] = 'flowing'
-        if stable and water.right not in occupied:
-            grid[water.right] = 'flowing'
+        # fill left
+        fill = water
+        while grid.get(fill.below) in stable_states and fill.left not in occupied:
+            grid[fill.left] = 'flowing'
+            fill = fill.left
+        # fill right
+        fill = water
+        while grid.get(fill.below) in stable_states and fill.right not in occupied:
+            grid[fill.right] = 'flowing'
+            fill = fill.right
 
 
 def simulate(data, vis=False):
