@@ -171,7 +171,7 @@ def fill_below(water, grid, bounds):
         grid[fill] = 'flowing'
         fill = fill.below
     if fill != water.below:
-        grid.dirty.extend([fill.above])
+        grid.dirty.append(fill.above)
 
 
 def still_water(water, grid):
@@ -204,14 +204,14 @@ def fill_sides(water, grid):
         grid[fill.left] = 'flowing'
         fill = fill.left
     if fill != water:
-        grid.dirty.extend([fill])
+        grid.dirty.append(fill)
 
     fill = water
     while grid.stable(fill.below) and not grid.stable(fill.right):
         grid[fill.right] = 'flowing'
         fill = fill.right
     if fill != water:
-        grid.dirty.extend([fill])
+        grid.dirty.append(fill)
 
 
 def simulate(data):
