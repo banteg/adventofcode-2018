@@ -2,6 +2,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from itertools import product, chain, count
 from operator import attrgetter
+from time import time
 
 import numpy as np
 from PIL import Image
@@ -11,6 +12,7 @@ import aoc
 reading_order = attrgetter('y', 'x')
 stable_states = {'clay', 'still'}
 frame = count()
+scale = 1
 
 
 @dataclass
@@ -57,8 +59,9 @@ class Bounds:
         )
 
     def __contains__(self, point: Point):
+        # only check vertical bounds
         return all([
-            point.x >= self.l, point.x <= self.r,
+            # point.x >= self.l, point.x <= self.r,
             point.y >= self.t, point.y <= self.b,
         ])
 
@@ -95,19 +98,27 @@ class Grid(dict):
 
     def __init__(self, data):
         super().__init__(data)
-        # cache clay and clay per row
+        self.cache = defaultdict(set)
+        for p in self:
+            self.cache[self[p]].add(p)
         self.clay = {p for p in self if self[p] == 'clay'}
         self.clay_on_row = defaultdict(set)
         for p in self.clay:
             self.clay_on_row[p.y].add(p)
 
+    def __setitem__(self, key, value):
+        last = self.get(key)
+        self.cache[last].discard(key)
+        self.cache[value].add(key)
+        dict.__setitem__(self, key, value)
+
     @property
     def still(self):
-        return {p for p in self if self[p] == 'still'}
+        return set(self.cache['still'])
 
     @property
     def flowing(self):
-        return {p for p in self if self[p] == 'flowing'}
+        return set(self.cache['flowing'])
 
 
 def render(grid, bounds, extra=None):
@@ -147,23 +158,28 @@ def render_image(grid, bounds):
     arr = np.array(data)
     img = Image.fromarray(arr.astype(np.uint8))
     w, h = img.size
-    img = img.resize((w * 8, h * 8))
+    img = img.resize((w * scale, h * scale))
     img.save(f'renders/{next(frame):04d}.png')
 
 
 def spread_water(grid, bounds):
-    occupied = grid.clay | grid.still
+    flow_down(grid, bounds)
+    still_water(grid, bounds)
+    flow_sides(grid, bounds)
 
-    # flow down
+
+def flow_down(grid, bounds):
     for water in grid.flowing:
         fill = water.below
-        while fill in bounds and fill not in occupied:
+        # edge case: tap can be higher than the first clay, so we only check the bottom bound
+        while fill.y <= bounds.b and grid.get(fill) not in stable_states:
             grid[fill] = 'flowing'
             fill = fill.below
 
-    # stabilize still water
+
+def still_water(grid, bounds):
     for water in grid.flowing:
-        if water.below in occupied:
+        if grid.get(water.below) in stable_states:
             try:
                 fill = Bounds(
                     t=water.y,
@@ -184,16 +200,17 @@ def spread_water(grid, bounds):
                 for p in fill:
                     grid[p] = 'still'
 
-    # flow to the sides
+
+def flow_sides(grid, bounds):
     for water in grid.flowing:
         # fill left
         fill = water
-        while grid.get(fill.below) in stable_states and fill.left not in occupied:
+        while grid.get(fill.below) in stable_states and grid.get(fill.left) not in stable_states:
             grid[fill.left] = 'flowing'
             fill = fill.left
         # fill right
         fill = water
-        while grid.get(fill.below) in stable_states and fill.right not in occupied:
+        while grid.get(fill.below) in stable_states and grid.get(fill.right) not in stable_states:
             grid[fill.right] = 'flowing'
             fill = fill.right
 
@@ -201,21 +218,21 @@ def spread_water(grid, bounds):
 def simulate(data, vis=False):
     clay = [Clay.from_string(x) for x in data.splitlines()]
     grid = Grid({p: 'clay' for p in chain.from_iterable(clay)})
+    bounds = Bounds.from_points(grid)
+    render_bounds = Bounds.from_points(grid)
     tap = Point(500, 0)
     grid[tap] = 'tap'
     grid[tap.below] = 'flowing'
-    bounds = Bounds.from_points(grid)
-    if vis:
-        render_image(grid, bounds)
 
     last = None
     while grid != last:
         last = grid.copy()
+        start = time()
         spread_water(grid, bounds)
-        if vis:
-            render_image(grid, bounds)
-        print(len(grid.still | grid.flowing))
-    return len(grid.still | grid.flowing)
+        a, b = len(grid.cache['still']), len(grid.cache['flowing'])
+        print(f'total={a+b} still={a} flowing={b} time={(time() - start) * 1000:.3f}ms')
+    print('part 2', len([x for x in grid.still if x in bounds]))
+    return len([x for x in grid.still | grid.flowing if x in bounds])
 
 
 examples = {'''\
@@ -231,4 +248,4 @@ y=13, x=498..504''': 57}
 
 @aoc.test(examples)
 def part_1(data: aoc.Data):
-    return simulate(data, vis=data in examples)
+    return simulate(data, vis=False)
