@@ -15,43 +15,23 @@ open_ground = '.'
 trees = '|'
 lumberyard = '#'
 
+near8 = {(x, y) for x, y in product((-1, 0, 1), (-1, 0, 1))} - {(0, 0)}
+
 window = pyglet.window.Window(500, 500, caption='aoc 2018 day 18')
-
-
-@dataclass(frozen=True)
-class Point:
-    x: int = 0
-    y: int = 0
-
-    def __add__(self, other):
-        return Point(self.x + other.x, self.y + other.y)
-
-    @property
-    def near(self):
-        deltas = {Point(x, y) for x, y in product((-1, 0, 1), (-1, 0, 1))} - {Point()}
-        return [self + delta for delta in deltas]
 
 
 @dataclass
 class Grid:
-    grid: {Point: str}
+    grid: np.array
 
     @classmethod
     def from_string(cls, data):
-        grid = {}
-        for y, row in enumerate(data.splitlines()):
-            for x, s in enumerate(row):
-                grid[Point(x, y)] = s
+        rows = [list(row) for row in data.splitlines()]
+        grid = np.array(rows)
         return cls(grid)
 
     def __repr__(self):
-        msg = ''
-        ordered = sorted(self.grid, key=attrgetter('y', 'x'))
-        for a, b in zip_longest(ordered, ordered[1:], fillvalue=Point(0, 0)):
-            msg += self.grid[a]
-            if a.y != b.y:
-                msg += '\n'
-        return msg
+        return '\n'.join(''.join(row) for row in self.grid)
 
     def render(self):
         colors = {
@@ -85,15 +65,18 @@ class Grid:
         return self.resource_value
 
     def advance_time(self):
-        temp = self.grid.copy()
-        for p in temp:
-            near = Grid.near(temp, p)
-            self.grid[p] = Grid.transform(temp[p], near)
+        before = self.grid.copy()
+        for y, row in enumerate(self.grid):
+            for x, s in enumerate(row):
+                near = Grid.near(before, x, y)
+                self.grid[y, x] = Grid.transform(before[y, x], near)
 
     @staticmethod
-    def near(grid, point):
-        near = [grid.get(p) for p in point.near]
-        return [x for x in near if x is not None]
+    def near(grid, x, y):
+        return [
+            grid[y + dy, x + dx] for dx, dy in near8
+            if 0 <= y + dy < grid.shape[0] and 0 <= x + dx < grid.shape[1]
+        ]
 
     @staticmethod
     def transform(s, near):
@@ -108,7 +91,7 @@ class Grid:
 
     @property
     def resource_value(self):
-        c = Counter(self.grid.values())
+        c = Counter(self.grid.flatten())
         return c[trees] * c[lumberyard]
 
 
