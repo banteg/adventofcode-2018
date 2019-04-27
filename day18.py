@@ -3,12 +3,19 @@ from dataclasses import dataclass
 from itertools import product, zip_longest
 from operator import attrgetter
 
+import numpy as np
+import pyglet
+from pyglet.gl import *
+from PIL import Image
+
 import aoc
 
 
 open_ground = '.'
 trees = '|'
 lumberyard = '#'
+
+window = pyglet.window.Window(500, 500, caption='aoc 2018 day 18')
 
 
 @dataclass(frozen=True)
@@ -45,6 +52,32 @@ class Grid:
             if a.y != b.y:
                 msg += '\n'
         return msg
+
+    def render(self):
+        colors = {
+            '.': [215, 222, 233],
+            '|': [163, 190, 140],
+            '#': [209, 135, 112],
+        }
+        data = []
+        for y in range(50):
+            data.append([])
+            for x in range(50):
+                data[-1].append(colors[self.grid[Point(x, y)]])
+        arr = np.array(data)
+        img = Image.fromarray(arr.astype(np.uint8))
+        img.save('1.png')
+        w, h, d = arr.shape
+        im = pyglet.image.ImageData(w, h, 'RGB', img.tobytes())
+        window.dispatch_events()
+        window.switch_to()
+        window.clear()
+        scale = min(window.width / im.texture.width, window.height / im.texture.height)
+        im.texture.width *= scale
+        im.texture.height *= scale
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        im.blit(0, 0)
+        window.flip()
 
     def run(self):
         for t in range(10):
