@@ -1,23 +1,13 @@
 from collections import Counter
 from dataclasses import dataclass
-from itertools import product, zip_longest
-from operator import attrgetter
+from itertools import product, count
 
 import numpy as np
-import pyglet
-from pyglet.gl import *
-from PIL import Image
 
 import aoc
 
-
-open_ground = '.'
-trees = '|'
-lumberyard = '#'
-
+open_ground, trees, lumberyard = '.|#'
 near8 = {(x, y) for x, y in product((-1, 0, 1), (-1, 0, 1))} - {(0, 0)}
-
-window = pyglet.window.Window(500, 500, caption='aoc 2018 day 18')
 
 
 @dataclass
@@ -33,36 +23,26 @@ class Grid:
     def __repr__(self):
         return '\n'.join(''.join(row) for row in self.grid)
 
-    def render(self):
-        colors = {
-            '.': [215, 222, 233],
-            '|': [163, 190, 140],
-            '#': [209, 135, 112],
-        }
-        data = []
-        for y in range(50):
-            data.append([])
-            for x in range(50):
-                data[-1].append(colors[self.grid[Point(x, y)]])
-        arr = np.array(data)
-        img = Image.fromarray(arr.astype(np.uint8))
-        img.save('1.png')
-        w, h, d = arr.shape
-        im = pyglet.image.ImageData(w, h, 'RGB', img.tobytes())
-        window.dispatch_events()
-        window.switch_to()
-        window.clear()
-        scale = min(window.width / im.texture.width, window.height / im.texture.height)
-        im.texture.width *= scale
-        im.texture.height *= scale
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        im.blit(0, 0)
-        window.flip()
-
     def run(self):
         for t in range(10):
             self.advance_time()
         return self.resource_value
+
+    def run_forever(self, goal: int):
+        seen = []
+        start = None
+        for t in count(1):
+            self.advance_time()
+            r = self.resource_value
+            if r not in seen:
+                start = None
+            elif start is None:
+                start = t + 1
+            if start and t > start + 3 and r == seen[start]:
+                size = t - start
+                return seen[start + (goal - 1 - start) % (size - 1)]
+            print(t, end='\r')
+            seen.append(r)
 
     def advance_time(self):
         before = self.grid.copy()
@@ -115,3 +95,8 @@ def part_1(data: aoc.Data):
     grid = Grid.from_string(data)
     return grid.run()
 
+
+@aoc.test({})
+def part_1(data: aoc.Data):
+    grid = Grid.from_string(data)
+    return grid.run_forever(1_000_000_000)
