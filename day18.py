@@ -97,6 +97,6 @@ def part_1(data: aoc.Data):
 
 
 @aoc.test({})
-def part_1(data: aoc.Data):
+def part_2(data: aoc.Data):
     grid = Grid.from_string(data)
     return grid.run_forever(1_000_000_000)
