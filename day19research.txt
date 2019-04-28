@@ -1,21 +1,30 @@
-'addr': lambda r, a, b: r[a] + r[b],
-'addi': lambda r, a, b: r[a] + b,
-'mulr': lambda r, a, b: r[a] * r[b],
-'muli': lambda r, a, b: r[a] * b,
-'banr': lambda r, a, b: r[a] & r[b],
-'bani': lambda r, a, b: r[a] & b,
-'borr': lambda r, a, b: r[a] | r[b],
-'bori': lambda r, a, b: r[a] | b,
-'setr': lambda r, a, b: r[a],
-'seti': lambda r, a, b: a,
-'gtir': lambda r, a, b: int(a > r[b]),
-'grti': lambda r, a, b: int(r[a] > b),
-'gtrr': lambda r, a, b: int(r[a] > r[b]),
-'eqir': lambda r, a, b: int(a == r[b]),
-'eqri': lambda r, a, b: int(r[a] == b),
-'eqrr': lambda r, a, b: int(r[a] == r[b]),
+// opcodes
+addr = r[a] + r[b]
+addi = r[a] + b
+mulr = r[a] * r[b]
+muli = r[a] * b
+banr = r[a] & r[b]
+bani = r[a] & b
+borr = r[a] | r[b]
+bori = r[a] | b
+setr = r[a]
+seti = a
+gtir = a > r[b]
+grti = r[a] > b
+gtrr = r[a] > r[b]
+eqir = a == r[b]
+eqri = r[a] == b
+eqrr = r[a] == r[b]
 
+// registers
+r[0] result
+r[1] instruction pointer
+r[2] outer loop
+r[3] inner loop
+r[4] comparison
+r[5] limit
 
+// loop sample
 [0, 2, 1, 2, 0, 896]
 [0, 2, 1, 3, 0, 896]
 [0, 2, 1, 4, 0, 896]
@@ -29,7 +38,7 @@
 [0, 2, 1, 12, 0, 896]
 [0, 2, 1, 13, 0, 896]
 
-
+// python loop
 for r2 in range(1, r[5] + 1):
     for r3 in range(1, r[5] + 1):
         r[2] = r2
@@ -38,14 +47,6 @@ for r2 in range(1, r[5] + 1):
             r[0] += r[2]
         if r[2] == r[5]:
             r[1] = 15
-
-// registers
-r[0] result
-r[1] instruction pointer
-r[2] outer loop
-r[3] inner loop
-r[4] comparison
-r[5] limit
 
 // the program
   0 addi 1 16 1 // jumpi 17
