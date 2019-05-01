@@ -1,8 +1,9 @@
 import re
-import json
 import click
 import requests
-from os.path import exists
+from pathlib import Path
+
+from config import cookies
 
 
 ok = click.style('✔︎', fg='green')
@@ -51,21 +52,21 @@ def test(cases):
     return decorator
 
 
-def input_name(day):
-    return f'inputs/day{day:02d}.txt'
+def input_file(day):
+    return Path(f'inputs/day{day:02d}.txt')
 
 
 def download_input(day, year=2018):
-    cookies = json.load(open('cookie.json'))
     r = requests.get(f'http://adventofcode.com/{year}/day/{day}/input', cookies=cookies)
     r.raise_for_status()
-    with open(input_name(day), 'w') as f:
-        f.write(r.text)
+    path = input_file(day)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(r.text)
     print(f'downloaded input for day {day}')
 
 
 def load_input(day):
-    name = input_name(day)
-    if not exists(name):
+    path = input_file(day)
+    if not path.exists():
         download_input(day)
-    return Data(open(name).read())
+    return Data(path.read_text())

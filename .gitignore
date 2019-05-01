@@ -1,3 +1,5 @@
 inputs
 __pycache__
-cookie.json
+.vscode
+.idea
+config.py
