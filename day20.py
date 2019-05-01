@@ -80,7 +80,7 @@ class Grid:
                 raise ValueError(symbol)
         return g
 
-    def find_furthest_room(self):
+    def find_room_distances(self):
         start = Point()
         visited = {start}
         frontier = [(0, start)]
@@ -94,7 +94,7 @@ class Grid:
                     dists[n] = dist + 1
                 visited.add(n)
                 frontier.append((dist + 1, n))
-        return max(dists.values())
+        return dists
 
     def neighbours(self, point):
         return [
@@ -114,4 +114,11 @@ examples = {
 def part_1(data: aoc.Data):
     grid = Grid.from_string(data.strip())
     # print(grid)
-    return grid.find_furthest_room()
+    return max(grid.find_room_distances().values())
+
+
+@aoc.test({})
+def part_2(data: aoc.Data):
+    grid = Grid.from_string(data.strip())
+    dist = grid.find_room_distances()
+    return len([x for x in dist.values() if x >= 1000])
