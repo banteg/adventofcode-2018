@@ -104,6 +104,9 @@ class Grid:
 
 examples = {
     '^WNE$': 3,
+    '^N(E|W)S$': 3,
+    '^N(EEENWWW|N)$': 5,
+    '^(SENNWWSWN|WSW)$': 4,
     '^ENWWW(NEEE|SSE(EE|N))$': 10,
     '^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$': 18,
     '^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$': 23,
