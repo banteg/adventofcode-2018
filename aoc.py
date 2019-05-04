@@ -29,9 +29,10 @@ def test(cases):
         imported = __import__(f.__module__)
         if imported.__name__ != '__main__':
             return f
-        day = int(re.search(r'\d+', imported.__file__).group(0))
-        part = f.__name__.split('_')[-1]
-        click.secho(f'day {day}, part {part}')
+        path = Path(imported.__file__)
+        day = int(re.search(r'\d+', path.name).group(0))
+        part = f.__name__.replace('_', ' ')
+        click.secho(f'day {day}, {part}')
         tests_ok = True
         for case, expected in cases.items():
             case_pretty = case.replace('\n', ', ')
