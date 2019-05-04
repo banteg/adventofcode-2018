@@ -1,7 +1,6 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from itertools import product, chain, count
-from operator import attrgetter
 
 import numpy as np
 from PIL import Image
@@ -23,7 +22,7 @@ class Point:
 
     def __eq__(self, other):
         return (self.x, self.y) == (other.x, other.y)
-    
+
     def __add__(self, other):
         return Point(self.x + other.x, self.y + other.y)
 
@@ -34,11 +33,11 @@ class Point:
     @property
     def below(self):
         return self + Point(0, 1)
-    
+
     @property
     def left(self):
         return self + Point(-1, 0)
-    
+
     @property
     def right(self):
         return self + Point(1, 0)
@@ -67,7 +66,7 @@ class Bounds:
     def __iter__(self):
         for x, y in product(range(self.l, self.r + 1), range(self.t, self.b + 1)):
             yield Point(x, y)
-    
+
     def to_points(self):
         return [
             [Point(x, y) for x in range(self.l, self.r + 1)]

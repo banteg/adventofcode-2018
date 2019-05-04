@@ -26,6 +26,7 @@ def print_state(state):
     pretty = ''.join(state.get(x, '.') for x in range(min(state), max(state) + 1))
     print(min(state), pretty, max(state))
 
+
 def grow(state, notes):
     new = defaultdict(lambda: '.')
     for note in notes:
@@ -51,7 +52,7 @@ def part_1(data: aoc.Data):
 
 
 @aoc.test({})
-def part_1(data: aoc.Data):
+def part_2(data: aoc.Data):
     state, _, *notes = data.splitlines()
     state = dict(enumerate(state.split(': ')[-1]))
     values = [value(state)]

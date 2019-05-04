@@ -1,10 +1,6 @@
-from collections import deque
 from dataclasses import dataclass
 
-
 import aoc
-
-import click
 
 
 @dataclass(frozen=True)
@@ -102,6 +98,7 @@ class Grid:
             if self.grid.get(point + move) in doors.values()
         ]
 
+
 examples = {
     '^WNE$': 3,
     '^N(E|W)S$': 3,
@@ -112,6 +109,7 @@ examples = {
     '^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$': 23,
     '^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$': 31,
 }
+
 
 @aoc.test(examples)
 def part_1(data: aoc.Data):
