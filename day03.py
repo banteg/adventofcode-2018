@@ -1,11 +1,14 @@
 import aoc
 import numpy as np
 
-@aoc.test({
-'''#1 @ 1,3: 4x4
-#2 @ 3,1: 4x4
-#3 @ 5,5: 2x2''': 4
-})
+example = '''
+    #1 @ 1,3: 4x4
+    #2 @ 3,1: 4x4
+    #3 @ 5,5: 2x2
+    '''
+
+
+@aoc.test({example: 4})
 def part_1(data: aoc.Data):
     rects = data.ints_lines
     fabric = np.zeros((1000, 1000))
@@ -14,11 +17,7 @@ def part_1(data: aoc.Data):
     return np.sum(fabric > 1)
 
 
-@aoc.test({
-'''#1 @ 1,3: 4x4
-#2 @ 3,1: 4x4
-#3 @ 5,5: 2x2''': 3
-})
+@aoc.test({example: 3})
 def part_2(data: aoc.Data):
     rects = data.ints_lines
     fabric = np.zeros((1000, 1000))

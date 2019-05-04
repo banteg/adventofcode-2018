@@ -82,7 +82,7 @@ def detect_crash(cars):
         coords[(c.x, c.y)].append(c)
 
     crashed = [i for i in coords if len(coords[i]) > 1]
-    for i in  crashed:
+    for i in crashed:
         # print('crash at', i, coords[i])
         for c in coords[i]:
             c.alive = False

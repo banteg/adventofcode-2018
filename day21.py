@@ -31,7 +31,6 @@ def run_program(code, part=1):
         i, *args = lines[ip].split()
         a, b, c = map(int, args)
         r[ipr] = ip
-        bef = r.copy()
 
         # addi 2 1 2
         if ip == 24:

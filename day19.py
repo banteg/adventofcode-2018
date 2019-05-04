@@ -2,14 +2,16 @@ import aoc
 
 
 examples = {
-    '''#ip 0
-seti 5 0 1
-seti 6 0 2
-addi 0 1 0
-addr 1 2 3
-setr 1 0 0
-seti 8 0 4
-seti 9 0 5''': 6
+    '''
+    #ip 0
+    seti 5 0 1
+    seti 6 0 2
+    addi 0 1 0
+    addr 1 2 3
+    setr 1 0 0
+    seti 8 0 4
+    seti 9 0 5
+    ''': 6
 }
 
 codes = {
@@ -43,7 +45,6 @@ def run_program(code):
         i, *args = lines[ip].split()
         a, b, c = [int(x) for x in args]
         r[ipr] = ip
-        bef = r.copy()
         r[c] = codes[i](r, a, b)
         ip = r[ipr] + 1
         # print(f'{n} ip={ip} {bef} {lines[ip]} {r}')

@@ -3,12 +3,14 @@ from collections import Counter
 import numpy as np
 
 
-example = '''1, 1
-1, 6
-8, 3
-3, 4
-5, 5
-8, 9'''
+example = '''
+    1, 1
+    1, 6
+    8, 3
+    3, 4
+    5, 5
+    8, 9
+    '''
 
 
 def bounds(coordinates):
@@ -58,5 +60,5 @@ def part_2(data: aoc.Data):
         for x in range(l, r + 1):
             c = vicinity(x, y, coordinates)
             area[y - t][x - l] = c
-    max_vicinity = 32 if data == example else 10000
+    max_vicinity = 32 if data == aoc.cleandoc(example) else 10000
     return np.sum(area < max_vicinity)

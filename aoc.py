@@ -2,6 +2,7 @@ import re
 import click
 import requests
 from pathlib import Path
+from inspect import cleandoc
 
 from config import cookies
 
@@ -35,6 +36,7 @@ def test(cases):
         click.secho(f'day {day}, {part}')
         tests_ok = True
         for case, expected in cases.items():
+            case = cleandoc(case)
             case_pretty = case.replace('\n', ', ')
             data = Data(case)
             result = f(data)
