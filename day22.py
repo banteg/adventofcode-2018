@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from collections import deque
 
 import aoc
+import time
 
 import click
 import networkx as nx
@@ -56,24 +57,24 @@ class RescueOperation(Grid):
         'narrow': {'torch', 'neither'},
     }
 
-    def dijkstra(self):
+    def dijkstra(self, margin=20):
         G = nx.Graph()
         start = (self.mouth, 'torch')
         target = (self.target, 'torch')
-        frontier = deque([start])
 
-        while frontier:
-            point, tool = frontier.popleft()
-            for other_tool in self.tools(point) - {tool}:
-                a, b = (point, tool), (point, other_tool)
-                if b not in G:
-                    G.add_edge(a, b, weight=7)
-                    frontier.append(b)
-            for move in self.near(point):
-                a, b = (point, tool), (move, tool)
-                if (a, b) not in G.edges and tool in self.tools(move):
-                    G.add_edge(a, b, weight=1)
-                    frontier.append(b)
+        for x in range(self.target.x + margin):
+            for y in range(self.target.y + margin):
+                point = Point(x, y)
+
+                # switch tool
+                tool, other_tool = self.tools(point)
+                G.add_edge((point, tool), (point, other_tool), weight=7)
+
+                # move to adjacent region
+                for dx, dy in [(1, 0), (0, 1)]:
+                    move = point + Point(dx, dy)
+                    for tool in self.tools(point) & self.tools(move):
+                        G.add_edge((point, tool), (move, tool), weight=1)
 
         self.render(nx.dijkstra_path(G, start, target))
         return nx.dijkstra_path_length(G, start, target)
@@ -85,13 +86,6 @@ class RescueOperation(Grid):
     def tools(self, point):
         """Tools usable at coordinate."""
         return self.valid_tools[self.region(point)]
-
-    def near(self, point, margin=20):
-        """Four adjacent points within bounds."""
-        adjacent = (-1, 0), (0, -1), (1, 0), (0, 1)
-        for p in [point + Point(x, y) for x, y in adjacent]:
-            if 0 <= p.x <= self.target.x + margin and 0 <= p.y <= self.target.y + margin:
-                yield p
 
     def render(self, path):
         path = {p: t for p, t in path}
