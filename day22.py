@@ -1,8 +1,6 @@
 from dataclasses import dataclass
-from collections import deque
 
 import aoc
-import time
 
 import click
 import networkx as nx
