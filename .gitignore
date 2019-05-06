@@ -3,6 +3,7 @@ __pycache__
 .idea
 .ipynb_checkpoints
 .pytest_cache
+.mypy_cache
 
 inputs
 config.py
