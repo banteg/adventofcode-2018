@@ -1,6 +1,10 @@
 from dataclasses import dataclass
+from collections import deque
 
 import aoc
+
+import click
+import networkx as nx
 
 
 @dataclass(frozen=True)
@@ -13,7 +17,6 @@ class Point:
 
 
 class Grid:
-
     def __init__(self, depth: int, target: Point):
         self.mouth = Point(0, 0)
         self.depth = depth
@@ -45,17 +48,85 @@ class Grid:
         return self.erosion[point]
 
 
-examples = {
-    '''
+class RescueOperation(Grid):
+    regions = ['rocky', 'wet', 'narrow']
+    valid_tools = {
+        'rocky': {'climbing gear', 'torch'},
+        'wet': {'climbing gear', 'neither'},
+        'narrow': {'torch', 'neither'},
+    }
+
+    def dijkstra(self):
+        G = nx.Graph()
+        start = (self.mouth, 'torch')
+        target = (self.target, 'torch')
+        frontier = deque([start])
+
+        while frontier:
+            point, tool = frontier.popleft()
+            for other_tool in self.tools(point) - {tool}:
+                a, b = (point, tool), (point, other_tool)
+                if b not in G:
+                    G.add_edge(a, b, weight=7)
+                    frontier.append(b)
+            for move in self.near(point):
+                a, b = (point, tool), (move, tool)
+                if (a, b) not in G.edges and tool in self.tools(move):
+                    G.add_edge(a, b, weight=1)
+                    frontier.append(b)
+
+        self.render(nx.dijkstra_path(G, start, target))
+        return nx.dijkstra_path_length(G, start, target)
+
+    def region(self, point):
+        """Region type at coordinate."""
+        return self.regions[self.erosion_level(point) % 3]
+
+    def tools(self, point):
+        """Tools usable at coordinate."""
+        return self.valid_tools[self.region(point)]
+
+    def near(self, point, margin=20):
+        """Four adjacent points within bounds."""
+        adjacent = (-1, 0), (0, -1), (1, 0), (0, 1)
+        for p in [point + Point(x, y) for x, y in adjacent]:
+            if 0 <= p.x <= self.target.x + margin and 0 <= p.y <= self.target.y + margin:
+                yield p
+
+    def render(self, path):
+        path = {p: t for p, t in path}
+        right = max(p.x for p in path)
+        bottom = max(p.y for p in path)
+        colors = {'neither': 'green', 'torch': 'yellow', 'climbing gear': 'red'}
+        symbols = '.=|'
+        for y in range(bottom + 1):
+            for x in range(right + 1):
+                p = Point(x, y)
+                color = colors.get(path.get(p))
+                symbol = symbols[self.erosion_level(p) % 3]
+                click.secho(symbol, bg=color, dim=color is None, nl=False)
+            print()
+
+
+example = '''
     depth: 510
     target: 10,10
-    ''': 114
-}
+    '''
 
 
-@aoc.test(examples)
+@aoc.test({example: 114})
 def part_1(data: aoc.Data):
     a, b = data.ints_lines
     depth = a[0]
     target = Point(*b)
     return Grid(depth, target).survey()
+
+
+@aoc.test({example: 45})
+def part_2(data: aoc.Data):
+    a, b = data.ints_lines
+    depth = a[0]
+    target = Point(*b)
+    grid = RescueOperation(depth, target)
+    grid.survey()
+    return grid.dijkstra()
