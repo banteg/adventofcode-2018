@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-
-import aoc
+from typing import Dict
 
 import click
 import networkx as nx
+
+import aoc
 
 
 @dataclass(frozen=True)
@@ -20,7 +21,7 @@ class Grid:
         self.mouth = Point(0, 0)
         self.depth = depth
         self.target = target
-        self.erosion = {}
+        self.erosion: Dict[Point, int] = {}
 
     def survey(self):
         return sum(self.erosion_level(point) % 3 for point in self.walk())
