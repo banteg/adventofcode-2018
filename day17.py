@@ -1,6 +1,7 @@
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from itertools import product, chain, count
+from typing import List
 
 import numpy as np
 from PIL import Image
@@ -51,7 +52,7 @@ class Bounds:
     r: int
 
     @classmethod
-    def from_points(cls, points: [Point]):
+    def from_points(cls, points: List[Point]):
         return cls(
             t=min(p.y for p in points),
             l=min(p.x for p in points),
