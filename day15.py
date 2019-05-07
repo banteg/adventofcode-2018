@@ -1,6 +1,7 @@
 from collections import deque
 from dataclasses import dataclass
 from itertools import chain, count
+from typing import List
 
 import numpy as np
 import pyglet
@@ -72,8 +73,8 @@ class Unit:
 
 @dataclass
 class Grid:
-    walls: [Point]
-    units: [Unit]
+    walls: List[Point]
+    units: List[Unit]
 
     @classmethod
     def from_string(cls, data):
@@ -93,11 +94,11 @@ class Grid:
         return self
 
     @property
-    def turn_order(self) -> [Unit]:
+    def turn_order(self) -> List[Unit]:
         return sorted(self.alive_units, key=reading_order)
 
     @property
-    def alive_units(self) -> [Unit]:
+    def alive_units(self) -> List[Unit]:
         return [x for x in self.units if x.alive]
 
     def move(self, unit: Unit):
@@ -133,7 +134,7 @@ class Grid:
             self.update_passable_cache()
             return True
 
-    def breadth_search(self, start: Point, targets: [Point]):
+    def breadth_search(self, start: Point, targets: List[Point]):
         frontier = deque([(0, start)])  # dist, pos
         visited = {start}
         meta = {start: (0, None)}  # dist, came_from
