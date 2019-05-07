@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from operator import attrgetter
 from collections import Counter, defaultdict
+from itertools import combinations
 
 from z3 import Ints, Int, If, Optimize, Sum
+import networkx as nx
 
 import aoc
 
@@ -71,13 +73,34 @@ def solve_z3(bots):
     opt.add(near == nanobots_in_range)
     opt.maximize(near)
     opt.minimize(dist_from_start)
+
     opt.check()
-    
     model = opt.model()
     final = [model[i].as_long() for i in pos]
     return dist(start, final)
 
 
+def manhattan_distance(a, b):
+    return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z)
+
+
+def overlap(bots):
+    return manhattan_distance(*bots) <= bots[0].r + bots[1].r
+
+
+def signed_distance_function(bot):
+    return abs(bot.x) + abs(bot.y) + abs(bot.z) - bot.r
+
+
+def solve_nx(bots):
+    G = nx.Graph()
+    bots = [Nanobot(*bot) for bot in bots]
+    G.add_edges_from(filter(overlap, combinations(bots, 2)))
+    clique = max(nx.find_cliques(G), key=len)
+    return max(map(signed_distance_function, clique))
+
+
 @aoc.test({example_2: 36})
 def part_2(data: aoc.Data):
-    return solve_z3(data.ints_lines)
+    # return solve_z3(data.ints_lines)
+    return solve_nx(data.ints_lines)
