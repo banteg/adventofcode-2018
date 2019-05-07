@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from operator import attrgetter
 from collections import Counter, defaultdict
 
-from z3 import Ints, Int, If, Optimize
+from z3 import Ints, Int, If, Optimize, Sum
 
 import aoc
 
@@ -51,7 +51,7 @@ example_2 = '''
 def solve_z3(bots):
     
     def Abs(x):
-        return If(x < 0, -x, x)
+        return If(x >= 0, x, -x)
     
     def Dist(a, b):
         return Abs(a[0] - b[0]) + Abs(a[1] - b[1]) + Abs(a[2] - b[2])
@@ -62,17 +62,19 @@ def solve_z3(bots):
     start = 0, 0, 0
     x, y, z = Ints('x y z')
     pos = x, y, z
-    cost = Int('cost')
-    cost_expr = x * 0
-    for *bot, r in bots:
-        cost_expr += If(Dist(bot, pos) <= r, 1, 0)
+    near = Int('near')
+    
+    dist_from_start = Dist(start, pos)
+    nanobots_in_range = Sum([If(Dist(bot, pos) <= r, 1, 0) for *bot, r in bots])
+    
     opt = Optimize()
-    opt.add(cost == cost_expr)
-    opt.maximize(cost)
-    opt.minimize(Dist(start, pos))
+    opt.add(near == nanobots_in_range)
+    opt.maximize(near)
+    opt.minimize(dist_from_start)
     opt.check()
+    
     model = opt.model()
-    final = model[x].as_long(), model[y].as_long(), model[z].as_long()
+    final = [model[i].as_long() for i in pos]
     return dist(start, final)
 
 
