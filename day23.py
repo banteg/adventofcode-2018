@@ -80,19 +80,17 @@ def solve_z3(bots):
     return dist(start, final)
 
 
-def manhattan_distance(a, b):
-    return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z)
-
-
-def overlap(bots):
-    return manhattan_distance(*bots) <= bots[0].r + bots[1].r
-
-
-def signed_distance_function(bot):
-    return abs(bot.x) + abs(bot.y) + abs(bot.z) - bot.r
-
-
 def solve_nx(bots):
+
+    def manhattan_distance(a, b):
+        return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z)
+
+    def overlap(bots):
+        return manhattan_distance(*bots) <= bots[0].r + bots[1].r
+
+    def signed_distance_function(bot):
+        return abs(bot.x) + abs(bot.y) + abs(bot.z) - bot.r
+
     G = nx.Graph()
     bots = [Nanobot(*bot) for bot in bots]
     G.add_edges_from(filter(overlap, combinations(bots, 2)))
