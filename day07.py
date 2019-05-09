@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from itertools import count
 from string import ascii_uppercase
 
-import networkx as nx
-
 import aoc
 
 example = '''
@@ -44,13 +42,8 @@ def part_1(data: aoc.Data):
 
 @dataclass
 class Worker:
-    id_: int
     task: str = None
     remaining: int = None
-
-    def __repr__(self):
-        status = f'{self.task} {self.remaining}s' if self.task else '...'
-        return f'<W{self.id_}: {status}>'
 
 
 @aoc.test({example: 15})
@@ -59,33 +52,28 @@ def part_2(data: aoc.Data):
     per_task = 1 if is_example else 61
     worker_num = 2 if is_example else 5
 
-    G = nx.DiGraph()
-    for x in data.splitlines():
-        req = x.split()[1]
-        step = x.split()[7]
-        G.add_node(step, weight=per_task + ascii_uppercase.index(step))
-        G.add_node(req, weight=per_task + ascii_uppercase.index(req))
-        G.add_edge(step, req)
+    remaining, reqs = parse_steps(data)
+    weights = {s: per_task + ascii_uppercase.index(s) for s in remaining}
+    workers = [Worker() for _ in range(worker_num)]
+    finished = ''
 
-    completed = ''
-    workers = [Worker(n) for n in range(worker_num)]
     for t in count():
         for worker in workers:
             if worker.task:
                 worker.remaining -= 1
                 if worker.remaining == 0:
-                    completed += worker.task
-                    G.remove_node(worker.task)
+                    finished += worker.task
+                    remaining.remove(worker.task)
                     worker.task = None
         for worker in workers:
             if not worker.task:
                 busy = {worker.task for worker in workers}
-                can_do = sorted(n for n, d in G.out_degree if d == 0 and n not in busy)
+                can_do = sorted(s for s in remaining if reqs[s] <= set(finished) and s not in busy)
                 if can_do:
                     task = can_do[0]
                     worker.task = task
-                    worker.remaining = G.nodes[task]['weight']
+                    worker.remaining = weights[task]
 
-        # print(f'{t}'.rjust(5), *[(worker.task or '.').center(5) for worker in workers], completed, sep='  ')
-        if not G:
+        # print(f'{t}'.rjust(5), *[(worker.task or '.').center(5) for worker in workers], finished, sep='  ')
+        if not remaining:
             return t
