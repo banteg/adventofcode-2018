@@ -21,6 +21,10 @@ def log(*args, enabled=DEBUG, **kwds):
         print(*args, **kwds)
 
 
+class EndlessFight(Exception):
+    pass
+
+
 @dataclass
 class Group:
     units: int
@@ -162,8 +166,7 @@ class Fight:
                 f'{attacker.id_} attacks {defender.id_}, killing {before - defender.units} units'
             )
         if kill_counter == 0:
-            click.secho('endless fight', fg='red')
-            raise ValueError('endless fight')
+            raise EndlessFight
 
     def check_outcome(self):
         unit_counts = [
@@ -173,6 +176,21 @@ class Fight:
         unit_counts = [x for x in unit_counts if x > 0]
         if len(unit_counts) == 1:
             return unit_counts[0]
+
+
+def optimize_boost(data, boost_to):
+    for boost in count():
+        log(f'boost {boost}')
+        groups = parse_input(data)
+        for group in groups[boost_to]:
+            group.damage += boost
+        fight = Fight(groups)
+        try:
+            outcome = fight.simulate()
+        except EndlessFight:
+            continue
+        if sum(group.units for group in fight.armies[boost_to]) > 0:
+            return outcome
 
 
 def parse_input(data):
@@ -207,3 +225,9 @@ def part_1(data: aoc.Data):
     groups = parse_input(data)
     fight = Fight(groups)
     return fight.simulate()
+
+
+@aoc.test({example: 51})
+def part_2(data: aoc.Data):
+    log(data, end='\n\n')
+    return optimize_boost(data, 'Immune System')
